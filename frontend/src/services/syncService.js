@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 
-const BACKEND_URL = 'http://localhost:3001/api/corrigir';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api/corrigir';
 
 /**
  * Service to sync and evaluate pending offline student essays with the backend API (ENEM x Sisedu).

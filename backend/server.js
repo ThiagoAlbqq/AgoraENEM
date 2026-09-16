@@ -492,9 +492,13 @@ function getMockENEMEvaluation(id, textoDigitado, nomeFornecido, turmaFornecida)
   };
 }
 
-app.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(`  Plataforma SaaS Multi-Agente IA (ENEM x Sisedu)`);
-  console.log(`  API Endpoint: http://localhost:${PORT}/api/corrigir`);
-  console.log(`==================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(`  Plataforma SaaS Multi-Agente IA (ENEM x Sisedu)`);
+    console.log(`  API Endpoint: http://localhost:${PORT}/api/corrigir`);
+    console.log(`==================================================`);
+  });
+}
+
+export default app;
