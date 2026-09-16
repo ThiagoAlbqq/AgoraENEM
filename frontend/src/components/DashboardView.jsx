@@ -130,20 +130,37 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
         </h3>
 
         {(() => {
+          const normalizeTurmaName = (rawName) => {
+            if (!rawName || typeof rawName !== 'string') return 'Sem Turma Definida';
+            let cleaned = rawName.trim();
+            if (!cleaned) return 'Sem Turma Definida';
+            
+            // Standardize degree symbol ° (U+00B0) and ordinal º (U+00BA)
+            cleaned = cleaned.replace(/[°º]/g, 'º');
+            
+            // Standardize spacing (e.g., "3º G" -> "3º G", "3ºG" -> "3º G")
+            cleaned = cleaned.replace(/(\d+)\s*º\s*([a-zA-Z])/gi, '$1º $2');
+            cleaned = cleaned.replace(/\s+/g, ' ').toUpperCase();
+            
+            return cleaned;
+          };
+
           const turmaStatsMap = {};
           correctedList.forEach((r) => {
-            const turmaName = r.turma_aluno || r.extracted_data?.turma || 'Sem Turma Definida';
-            if (!turmaStatsMap[turmaName]) {
-              turmaStatsMap[turmaName] = { count: 0, totalScore: 0 };
+            const rawTurma = r.turma_aluno || r.extracted_data?.turma || 'Sem Turma Definida';
+            const normalizedTurma = normalizeTurmaName(rawTurma);
+
+            if (!turmaStatsMap[normalizedTurma]) {
+              turmaStatsMap[normalizedTurma] = { count: 0, totalScore: 0, displayName: normalizedTurma };
             }
-            turmaStatsMap[turmaName].count += 1;
-            turmaStatsMap[turmaName].totalScore += (r.nota_final || 0);
+            turmaStatsMap[normalizedTurma].count += 1;
+            turmaStatsMap[normalizedTurma].totalScore += (r.nota_final || 0);
           });
 
-          const turmaStats = Object.keys(turmaStatsMap).map((turma) => ({
-            turma,
-            count: turmaStatsMap[turma].count,
-            avgScore: Math.round(turmaStatsMap[turma].totalScore / turmaStatsMap[turma].count)
+          const turmaStats = Object.keys(turmaStatsMap).map((key) => ({
+            turma: turmaStatsMap[key].displayName,
+            count: turmaStatsMap[key].count,
+            avgScore: Math.round(turmaStatsMap[key].totalScore / turmaStatsMap[key].count)
           }));
 
           if (turmaStats.length === 0) {
