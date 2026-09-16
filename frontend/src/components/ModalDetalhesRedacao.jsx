@@ -99,167 +99,171 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
   // MINIMALIST INK-SAVING OFFICIAL SHEET TEMPLATE (2-Page Duplex Layout)
   const renderMinimalistOfficialSheet = () => (
-    <div id="minimalist-pdf-document" className="w-[720px] bg-transparent text-[#111111] space-y-4 font-sans text-xs">
-      
+    <div id="minimalist-pdf-document" className="w-[720px] bg-transparent text-[#111111] space-y-6 font-sans text-xs">
+
       {/* ==================== PAGE 1: AVALIAÇÃO PEDAGÓGICA (ENEM + SISEDU) ==================== */}
-      <div className="w-[720px] bg-[#ffffff] text-[#111111] p-5 font-sans text-xs border border-[#111111] rounded-lg box-border space-y-3" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-        {/* Institutional Top Header */}
-        <div className="border-b-2 border-[#111111] pb-2 flex justify-between items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-[#111111] uppercase font-mono">
-              ÁGORA ENEM — FICHA DE AVALIAÇÃO DE REDAÇÃO
-            </h1>
-            <p className="text-[9px] font-mono text-[#555555] uppercase mt-0.5">
-              SECRETARIA DA EDUCAÇÃO • SISTEMA PREDITIVO DE AVALIAÇÃO TEXTUAL (ENEM x SISEDU)
-            </p>
-          </div>
+      <div className="w-[720px] min-h-[960px] bg-[#ffffff] text-[#111111] p-6 font-sans text-xs border border-[#111111] rounded-lg box-border flex flex-col justify-between" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="space-y-4">
+          {/* Institutional Top Header */}
+          <div className="border-b-2 border-[#111111] pb-2 flex justify-between items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-[#111111] uppercase font-mono">
+                ÁGORA ENEM — FICHA DE AVALIAÇÃO DE REDAÇÃO
+              </h1>
+              <p className="text-[10px] font-mono text-[#555555] uppercase mt-0.5">
+                SECRETARIA DA EDUCAÇÃO • SISTEMA PREDITIVO DE AVALIAÇÃO TEXTUAL (ENEM x SISEDU)
+              </p>
+            </div>
 
-          <div className="text-right font-mono text-[9px] text-[#444444] border-l border-[#d0d0d0] pl-3 flex flex-col justify-center items-center">
-            <div><strong className="text-[#111111]">REGISTRO:</strong> #{String(redacao.id).padStart(5, '0')}</div>
-            <div><strong>EMISSÃO:</strong> {printDateStr} {printTimeStr}</div>
-          </div>
-        </div>
-
-        {/* Identification & Summary Grid */}
-        <div className="grid grid-cols-3 gap-3 border border-[#111111] p-2.5 rounded font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <div className="col-span-2 space-y-1">
-            <div className="flex flex-col column"><span className="text-[#666666] uppercase text-[9px] block font-sans font-bold">Estudante:</span> <strong className="text-sm text-[#111111] font-sans">{data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}</strong></div>
-            <div className="flex gap-4 text-[10px] pt-0.5 justify-between">
-              <span className="flex flex-col column"><span className="text-[#666666]">Turma:</span> <strong>{data.turma || redacao.turma_aluno || 'Sem Turma'}</strong></span>
-              <span className="flex flex-col column items-center"><span className="text-[#666666]">Data Lançamento:</span> <strong>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong></span>
-              <span className="flex flex-col column items-end"><span className="text-[#666666]">Entrada:</span> <strong>{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong></span>
+            <div className="text-right font-mono text-[9.5px] text-[#444444] border-l border-[#d0d0d0] pl-3 flex flex-col justify-center items-center">
+              <div><strong className="text-[#111111]">REGISTRO:</strong> #{String(redacao.id).padStart(5, '0')}</div>
+              <div><strong>EMISSÃO:</strong> {printDateStr} {printTimeStr}</div>
             </div>
           </div>
 
-          <div className="border-l border-[#111111] pl-3 text-center flex flex-col justify-center p-1">
-            <div className="text-[9px] font-sans font-bold uppercase text-[#555555]">NOTA FINAL ENEM</div>
-            <div className="text-2xl font-extrabold text-[#111111] leading-none my-0.5 font-mono">
-              {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'} <span className="text-xs font-normal text-[#666666]">/ 1000</span>
-            </div>
-            <div className="text-[8px] text-[#666666]">Escala Oficial MEC</div>
-          </div>
-        </div>
-
-        {/* SECTION 1: TABELA COMPACTA DE COMPETÊNCIAS ENEM (C1 A C5) */}
-        <div className="space-y-2" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <h2 className="text-[11px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
-            1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
-          </h2>
-
-          <table className="w-full text-left border-collapse text-[9.5px] border border-[#111111]">
-            <thead>
-              <tr className="bg-[#f2f2f2] font-mono text-[9px] uppercase">
-                <th className="p-1.5 border-r border-b border-[#111111] w-1/4">Competência</th>
-                <th className="p-1.5 border-r border-b border-[#111111] text-center w-14">Nota</th>
-                <th className="p-1.5 border-r border-b border-[#111111] w-1/3">Citação Direta do Texto</th>
-                <th className="p-1.5 border-b border-[#111111]">Parecer Pedagógico</th>
-              </tr>
-            </thead>
-            <tbody>
-              {enemCompetenciasMap.map(({ key, title }, idx) => {
-                const comp = enem[key] || { nota: 0, citacao_texto: 'Elemento ausente', justificativa: 'Não avaliado' };
-                const isLast = idx === enemCompetenciasMap.length - 1;
-                const borderBottomClass = isLast ? '' : 'border-b border-[#111111]';
-                return (
-                  <tr key={key} className="align-top" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                    <td className={`p-1.5 border-r ${borderBottomClass} border-[#111111] font-semibold text-[#111111]`}>
-                      {title}
-                    </td>
-                    <td className={`p-1.5 border-r ${borderBottomClass} border-[#111111] text-center font-mono font-bold text-xs`}>
-                      {comp.nota}
-                    </td>
-                    <td className={`p-1.5 border-r ${borderBottomClass} border-[#111111] font-mono text-[8.5px] italic bg-[#fafafa]`}>
-                      {comp.citacao_texto ? `"${comp.citacao_texto}"` : '—'}
-                    </td>
-                    <td className={`p-1.5 ${borderBottomClass} border-[#111111] leading-tight text-[#222222]`}>
-                      {comp.justificativa}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* SECTION 2: MATRIZ SISEDU (PROJETO ÁGORA) */}
-        <div className="space-y-2" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <h2 className="text-[11px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
-            2. RUBRICAS QUALITATIVAS SISEDU (PROJETO ÁGORA ESCOLAR)
-          </h2>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Dimensão Discursiva */}
-            <div className="border border-[#111111] p-2.5 space-y-1 rounded">
-              <h3 className="font-bold text-[10px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-0.5">Dimensão Discursiva</h3>
-              <div className="space-y-1 text-[10px]">
-                {siseduDiscursivaMap.map(({ key, title }) => {
-                  const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', justificativa: '—' };
-                  return (
-                    <div key={key} className="border-b border-[#eeeeee] pb-0.5 last:border-b-0">
-                      <div className="flex justify-between font-semibold text-[#111111]">
-                        <span>{title}:</span>
-                        <span className="font-mono underline">{item.nivel}</span>
-                      </div>
-                      <p className="text-[#444444] leading-tight text-[9px] my-0.5">{item.justificativa}</p>
-                    </div>
-                  );
-                })}
+          {/* Identification & Summary Grid */}
+          <div className="grid grid-cols-3 gap-3 border border-[#111111] p-3 rounded font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div className="col-span-2 space-y-1">
+              <div className="flex flex-col column"><span className="text-[#666666] uppercase text-[9px] block font-sans font-bold">Estudante:</span> <strong className="text-sm text-[#111111] font-sans">{data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}</strong></div>
+              <div className="flex gap-4 text-[10.5px] pt-1 justify-between">
+                <span className="flex flex-col column"><span className="text-[#666666]">Turma:</span> <strong>{data.turma || redacao.turma_aluno || 'Sem Turma'}</strong></span>
+                <span className="flex flex-col column items-center"><span className="text-[#666666]">Data Lançamento:</span> <strong>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong></span>
+                <span className="flex flex-col column items-end"><span className="text-[#666666]">Entrada:</span> <strong>{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong></span>
               </div>
             </div>
 
-            {/* Dimensão Ético-Moral */}
-            <div className="border border-[#111111] p-2.5 space-y-1 rounded">
-              <h3 className="font-bold text-[10px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-0.5">Dimensão Ético-Moral</h3>
-              <div className="space-y-1 text-[10px]">
-                {siseduEticoMoralMap.map(({ key, title }) => {
-                  const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', justificativa: '—' };
+            <div className="border-l border-[#111111] pl-3 text-center flex flex-col justify-center p-1.5">
+              <div className="text-[9.5px] font-sans font-bold uppercase text-[#555555]">NOTA FINAL ENEM</div>
+              <div className="text-2xl font-extrabold text-[#111111] leading-none my-0.5 font-mono">
+                {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'} <span className="text-xs font-normal text-[#666666]">/ 1000</span>
+              </div>
+              <div className="text-[8.5px] text-[#666666]">Escala Oficial MEC</div>
+            </div>
+          </div>
+
+          {/* SECTION 1: TABELA COMPACTA DE COMPETÊNCIAS ENEM (C1 A C5) */}
+          <div className="mt-5 space-y-3.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+              1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
+            </h2>
+
+            <table className="w-full text-left border-collapse text-[10px] border border-[#111111]">
+              <thead>
+                <tr className="bg-[#f2f2f2] font-mono text-[9.5px] uppercase">
+                  <th className="p-2 border-r border-b border-[#111111] w-1/4">Competência</th>
+                  <th className="p-2 border-r border-b border-[#111111] text-center w-16">Nota</th>
+                  <th className="p-2 border-r border-b border-[#111111] w-1/3">Citação Direta do Texto</th>
+                  <th className="p-2 border-b border-[#111111]">Parecer Pedagógico</th>
+                </tr>
+              </thead>
+              <tbody>
+                {enemCompetenciasMap.map(({ key, title }, idx) => {
+                  const comp = enem[key] || { nota: 0, citacao_texto: 'Elemento ausente', justificativa: 'Não avaliado' };
+                  const isLast = idx === enemCompetenciasMap.length - 1;
+                  const borderBottomClass = isLast ? '' : 'border-b border-[#111111]';
                   return (
-                    <div key={key} className="border-b border-[#eeeeee] pb-0.5 last:border-b-0">
-                      <div className="flex justify-between font-semibold text-[#111111]">
-                        <span>{title}:</span>
-                        <span className="font-mono underline">{item.nivel}</span>
-                      </div>
-                      <p className="text-[#444444] leading-tight text-[9px] my-0.5">{item.justificativa}</p>
-                    </div>
+                    <tr key={key} className="align-top" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                      <td className={`p-2 border-r ${borderBottomClass} border-[#111111] font-semibold text-[#111111]`}>
+                        {title}
+                      </td>
+                      <td className={`p-2 border-r ${borderBottomClass} border-[#111111] text-center font-mono font-bold text-sm`}>
+                        {comp.nota}
+                      </td>
+                      <td className={`p-2 border-r ${borderBottomClass} border-[#111111] font-mono text-[9px] italic bg-[#fafafa]`}>
+                        {comp.citacao_texto ? `"${comp.citacao_texto}"` : '—'}
+                      </td>
+                      <td className={`p-2 ${borderBottomClass} border-[#111111] leading-tight text-[#222222] text-ce  `}>
+                        {comp.justificativa}
+                      </td>
+                    </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* SECTION 2: MATRIZ SISEDU (PROJETO ÁGORA) */}
+          <div className="mt-5 space-y-3.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+              2. RUBRICAS QUALITATIVAS SISEDU (PROJETO ÁGORA ESCOLAR)
+            </h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Dimensão Discursiva */}
+              <div className="border border-[#111111] p-3 space-y-1.5 rounded">
+                <h3 className="font-bold text-[10.5px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Discursiva</h3>
+                <div className="space-y-1.5 text-[11px]">
+                  {siseduDiscursivaMap.map(({ key, title }) => {
+                    const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', justificativa: '—' };
+                    return (
+                      <div key={key} className="my-2 border-b border-[#eeeeee] pb-1 last:border-b-0">
+                        <div className="flex justify-between font-semibold text-[#111111]">
+                          <span>{title}:</span>
+                          <span className="font-mono underline">{item.nivel}</span>
+                        </div>
+                        <p className="text-[#444444] leading-tight text-[10px] my-1">{item.justificativa}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dimensão Ético-Moral */}
+              <div className="border border-[#111111] p-3 space-y-1.5 rounded">
+                <h3 className="font-bold text-[10.5px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Ético-Moral</h3>
+                <div className="space-y-1.5 text-[11px]">
+                  {siseduEticoMoralMap.map(({ key, title }) => {
+                    const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', justificativa: '—' };
+                    return (
+                      <div key={key} className="my-2 border-b border-[#eeeeee] pb-1 last:border-b-0">
+                        <div className="flex justify-between font-semibold text-[#111111]">
+                          <span>{title}:</span>
+                          <span className="font-mono underline">{item.nivel}</span>
+                        </div>
+                        <p className="text-[#444444] leading-tight text-[10px] my-1">{item.justificativa}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ==================== PAGE 2: TRANSCRIÇÃO INTEGRAL & ASSINATURA ==================== */}
-      <div 
-        className="w-[720px] bg-[#ffffff] text-[#111111] p-5 font-sans text-xs border border-[#111111] rounded-lg box-border space-y-4 html2pdf__page-break" 
-        style={{ breakBefore: 'page', pageBreakBefore: 'always', breakInside: 'avoid', pageBreakInside: 'avoid' }}
-      >
-        {/* Page 2 Mini Reference Header */}
-        <div className="border-b border-[#111111] pb-1 flex justify-between items-center font-mono text-[9px] text-[#444444]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <div><strong className="text-[#111111]">ANEXO II: TRANSCRIÇÃO INTEGRAL & VALIDAÇÃO</strong> — REGISTRO #{String(redacao.id).padStart(5, '0')}</div>
-          <div>Estudante: <strong className="text-[#111111]">{data.aluno || redacao.nome_aluno || 'Estudante'}</strong></div>
-        </div>
+      {/* ==================== PAGE BREAK PARA PÁGINA 2 (VERSO DA FOLHA) ==================== */}
+      <div className="html2pdf__page-break" style={{ pageBreakBefore: 'always', breakBefore: 'page' }} />
 
-        {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO */}
-        <div className="space-y-2" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-          <h2 className="text-[11px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
-            3. TRANSCRIÇÃO INTEGRAL DO TEXTO DA REDAÇÃO (VERBATIM)
-          </h2>
-          <div className="p-3 border border-[#111111] bg-[#fafafa] font-mono text-[10px] leading-relaxed whitespace-pre-wrap text-[#111111] rounded min-h-[300px]">
-            {fullTextContent}
+      {/* ==================== PAGE 2: TRANSCRIÇÃO INTEGRAL & ASSINATURA ==================== */}
+      <div className="w-[720px] min-h-[960px] bg-[#ffffff] text-[#111111] p-6 font-sans text-xs border border-[#111111] rounded-lg box-border flex flex-col justify-between" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="space-y-4">
+          {/* Page 2 Mini Reference Header */}
+          <div className="border-b border-[#111111] pb-1.5 flex justify-between items-center font-mono text-[9.5px] text-[#444444]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div><strong className="text-[#111111]">ANEXO II: TRANSCRIÇÃO INTEGRAL & VALIDAÇÃO</strong> — REGISTRO #{String(redacao.id).padStart(5, '0')}</div>
+            <div>Estudante: <strong className="text-[#111111]">{data.aluno || redacao.nome_aluno || 'Estudante'}</strong></div>
+          </div>
+
+          {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO */}
+          <div className="mt-5 space-y-3.5 flex-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+              3. TRANSCRIÇÃO INTEGRAL DO TEXTO DA REDAÇÃO (VERBATIM)
+            </h2>
+            <div className="p-4 border border-[#111111] bg-[#fafafa] font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-[#111111] min-h-[380px] rounded">
+              {fullTextContent}
+            </div>
           </div>
         </div>
 
         {/* Footer & Teacher Signature Box */}
-        <div className="pt-4 flex justify-between items-end text-[9px] font-mono border-t border-[#111111] text-[#444444]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="pt-8 flex justify-between items-end text-[10px] font-mono border-t border-[#111111] text-[#444444] mt-4" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           <div>
             <div>Documento gerado pelo Sistema Ágora ENEM em {printDateStr}.</div>
             <div>Validação Pedagógica Automática via Inteligência Artificial.</div>
           </div>
 
-          <div className="text-center w-60 border-t border-[#111111] pt-1.5 mt-8">
+          <div className="text-center w-64 border-t border-[#111111] pt-2 mt-16">
             <div className="font-bold text-[#111111] font-sans text-xs">Assinatura do Professor / Avaliador</div>
-            <div className="text-[8px] text-[#666666]">Visto de Validação Pedagógica</div>
+            <div className="text-[9px] text-[#666666]">Visto de Validação Pedagógica</div>
           </div>
         </div>
       </div>
