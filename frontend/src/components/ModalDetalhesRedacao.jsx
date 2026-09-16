@@ -420,11 +420,37 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               <BookOpen className="w-4 h-4" />
               Texto Integral Transcrito
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === 'preview'
+                  ? 'border-[#f54e00] text-[#f54e00]'
+                  : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              }`}
+              title="Pré-visualizar e testar o layout da Folha PDF"
+            >
+              <FileText className="w-4 h-4 text-[#f54e00]" />
+              📄 Ver Prévia do PDF
+            </button>
           </div>
 
           {/* Modal Body */}
           <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
             
+            {/* TAB PREVIEW: VISUAL TEST OF THE PDF SHEET */}
+            {activeTab === 'preview' && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-xs text-[#807d72] bg-[#fafaf7] border border-[#e6e5e0] p-2.5 rounded-lg w-full max-w-[740px] text-center font-mono">
+                  💡 <strong>Modo Prévia de Teste:</strong> Qualquer alteração no código do template reflete aqui ao vivo via Hot Reload.
+                </div>
+                <div className="shadow-lg border border-[#d0d0d0] rounded-lg overflow-hidden bg-white">
+                  {renderMinimalistOfficialSheet()}
+                </div>
+              </div>
+            )}
+
             {/* TAB 1: ENEM MATRIX */}
             {activeTab === 'enem' && (
               <div className="space-y-4">
