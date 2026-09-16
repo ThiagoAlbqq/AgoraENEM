@@ -14,15 +14,6 @@ export default defineConfig({
       }
     }
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2015'
-    }
-  },
-  esbuild: {
-    target: 'es2015',
-    include: /\.(jsx?|tsx?)$/
-  },
   build: {
     target: 'es2015'
   }
