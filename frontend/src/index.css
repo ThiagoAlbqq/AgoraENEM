@@ -94,3 +94,33 @@
 .font-mono-code {
   font-family: var(--font-mono);
 }
+
+/* Official Print / PDF Styling (PRISMA Institutional Document Design) */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #26251e !important;
+  }
+
+  /* Hide UI elements during print */
+  aside, header, nav, button, form, .no-print, [role="dialog"] > div > div:first-child button {
+    display: none !important;
+  }
+
+  /* Force print document display */
+  .print\:block {
+    display: block !important;
+  }
+
+  #print-official-sheet {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+    background: #ffffff !important;
+    z-index: 999999;
+  }
+}
