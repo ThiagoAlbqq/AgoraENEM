@@ -7,7 +7,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [manualName, setManualName] = useState(redacao?.nome_aluno || '');
   const [manualTurma, setManualTurma] = useState(redacao?.turma_aluno || '');
   const [isSavingName, setIsSavingName] = useState(false);
-  const [activeTab, setActiveTab] = useState('ficha'); // 'ficha' | 'enem' | 'sisedu' | 'texto'
+  const [activeTab, setActiveTab] = useState('enem'); // 'enem' | 'sisedu' | 'texto'
   const [copiedText, setCopiedText] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -51,17 +51,17 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
       const opt = {
-        margin: [8, 8, 8, 8],
+        margin: [6, 6, 6, 6],
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
-      // Fallback to browser print if html2pdf fails
       window.print();
     } finally {
       setIsGeneratingPDF(false);
@@ -75,99 +75,99 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   };
 
   const enemCompetenciasMap = [
-    { key: 'competencia_1', title: 'Competência 1 - Norma Culta', desc: 'Domínio da modalidade escrita formal da língua portuguesa', color: '#dfa88f' },
-    { key: 'competencia_2', title: 'Competência 2 - Tema e Repertório', desc: 'Compreensão do tema e aplicação das áreas do conhecimento', color: '#9fc9a2' },
-    { key: 'competencia_3', title: 'Competência 3 - Argumentação', desc: 'Projeto de texto, organização e interpretação de fatos e opiniões', color: '#9fbbe0' },
-    { key: 'competencia_4', title: 'Competência 4 - Coesão e Coerência', desc: 'Conhecimento dos mecanismos linguísticos para a argumentação', color: '#c0a8dd' },
-    { key: 'competencia_5', title: 'Competência 5 - Proposta de Intervenção', desc: 'Elaboração de proposta respeitando os Direitos Humanos', color: '#c08532' }
+    { key: 'competencia_1', title: 'Competência 1 - Norma Culta', desc: 'Domínio da modalidade escrita formal da língua portuguesa' },
+    { key: 'competencia_2', title: 'Competência 2 - Tema e Repertório', desc: 'Compreensão do tema e aplicação das áreas do conhecimento' },
+    { key: 'competencia_3', title: 'Competência 3 - Argumentação', desc: 'Projeto de texto, organização e interpretação de fatos e opiniões' },
+    { key: 'competencia_4', title: 'Competência 4 - Coesão e Coerência', desc: 'Conhecimento dos mechanisms linguísticos para a argumentação' },
+    { key: 'competencia_5', title: 'Competência 5 - Proposta de Intervenção', desc: 'Elaboração de proposta respeitando os Direitos Humanos' }
   ];
 
   const siseduDiscursivaMap = [
-    { key: 'clareza_tese', title: 'Clareza da Tese', desc: 'Opinião implícita (Inicial) -> Tese clara (Em Desenv.) -> Tese crítica (Avançado)' },
-    { key: 'argumentacao', title: 'Argumentação', desc: 'Exemplos superficiais (Inicial) -> Organizados (Em Desenv.) -> Críticos/Interdisciplinares (Avançado)' },
-    { key: 'repertorio', title: 'Repertório', desc: 'Cotidiano imediato (Inicial) -> Cultural básico (Em Desenv.) -> Filosófico/Científico (Avançado)' }
+    { key: 'clareza_tese', title: 'Clareza da Tese' },
+    { key: 'argumentacao', title: 'Argumentação' },
+    { key: 'repertorio', title: 'Repertório' }
   ];
 
   const siseduEticoMoralMap = [
-    { key: 'empatia_alteridade', title: 'Empatia e Alteridade', desc: 'Reconhece o outro superficialmente -> Considera múltiplas perspectivas -> Consciência ética complexa' },
-    { key: 'justificacao_moral', title: 'Justificação Moral', desc: 'Opiniões intuitivas -> Justificativas racionais -> Fundamentadas em princípios' },
-    { key: 'conclusao_critica', title: 'Conclusão Crítica / Propostas', desc: 'Ausentes (Inicial) -> Genéricas (Em Desenv.) -> Propostas concretas e viáveis (Avançado)' }
+    { key: 'empatia_alteridade', title: 'Empatia e Alteridade' },
+    { key: 'justificacao_moral', title: 'Justificação Moral' },
+    { key: 'conclusao_critica', title: 'Conclusão Crítica / Propostas' }
   ];
 
   const printDateStr = new Date().toLocaleDateString('pt-BR');
   const printTimeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-  // MINIMALIST INK-SAVING OFFICIAL SHEET TEMPLATE (100% Eco-Friendly, High Contrast, Black & White Print Optimized)
+  // MINIMALIST INK-SAVING OFFICIAL SHEET TEMPLATE (100% Eco-Friendly, Off-screen PDF Render)
   const renderMinimalistOfficialSheet = () => (
-    <div id="minimalist-pdf-document" className="bg-[#ffffff] text-[#111111] p-6 space-y-4 font-sans text-xs border border-[#d0d0d0] rounded-lg">
+    <div id="minimalist-pdf-document" className="w-[720px] bg-[#ffffff] text-[#111111] p-5 space-y-3 font-sans text-xs border border-[#d0d0d0] rounded-lg">
       
       {/* Institutional Top Header */}
-      <div className="border-b-2 border-[#111111] pb-3 flex justify-between items-start">
+      <div className="border-b-2 border-[#111111] pb-2 flex justify-between items-start" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+          <h1 className="text-base font-bold tracking-tight text-[#111111] uppercase font-mono">
             ÁGORA ENEM — FICHA DE AVALIAÇÃO DE REDAÇÃO
           </h1>
-          <p className="text-[10px] font-mono text-[#555555] uppercase mt-0.5">
+          <p className="text-[9px] font-mono text-[#555555] uppercase mt-0.5">
             SECRETARIA DA EDUCAÇÃO • SISTEMA PREDITIVO DE AVALIAÇÃO TEXTUAL (ENEM x SISEDU)
           </p>
         </div>
 
-        <div className="text-right font-mono text-[10px] text-[#444444] border-l border-[#d0d0d0] pl-3">
+        <div className="text-right font-mono text-[9px] text-[#444444] border-l border-[#d0d0d0] pl-3">
           <div><strong className="text-[#111111]">REGISTRO:</strong> #{String(redacao.id).padStart(5, '0')}</div>
           <div><strong>EMISSÃO:</strong> {printDateStr} {printTimeStr}</div>
         </div>
       </div>
 
-      {/* Identification & Summary Grid (Ink Saving 1px outline box) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border border-[#111111] p-3 rounded font-mono">
-        <div className="col-span-2 space-y-1">
-          <div><span className="text-[#666666] uppercase text-[10px] block font-sans font-bold">Estudante:</span> <strong className="text-sm text-[#111111] font-sans">{data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}</strong></div>
-          <div className="flex gap-4 text-xs pt-1">
+      {/* Identification & Summary Grid */}
+      <div className="grid grid-cols-3 gap-2 border border-[#111111] p-2.5 rounded font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="col-span-2 space-y-0.5">
+          <div><span className="text-[#666666] uppercase text-[9px] block font-sans font-bold">Estudante:</span> <strong className="text-xs text-[#111111] font-sans">{data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}</strong></div>
+          <div className="flex gap-3 text-[10px] pt-0.5">
             <span><span className="text-[#666666]">Turma:</span> <strong>{data.turma || redacao.turma_aluno || 'Sem Turma'}</strong></span>
             <span><span className="text-[#666666]">Data Lançamento:</span> <strong>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong></span>
             <span><span className="text-[#666666]">Entrada:</span> <strong>{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong></span>
           </div>
         </div>
 
-        <div className="border-l border-[#111111] pl-3 text-center flex flex-col justify-center bg-[#fcfcfc] p-2">
-          <div className="text-[10px] font-sans font-bold uppercase text-[#555555]">NOTA FINAL ENEM</div>
-          <div className="text-3xl font-extrabold text-[#111111] leading-none my-0.5 font-mono">
-            {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'} <span className="text-xs font-normal text-[#666666]">/ 1000</span>
+        <div className="border-l border-[#111111] pl-2 text-center flex flex-col justify-center bg-[#fcfcfc] p-1">
+          <div className="text-[9px] font-sans font-bold uppercase text-[#555555]">NOTA FINAL ENEM</div>
+          <div className="text-2xl font-extrabold text-[#111111] leading-none my-0.5 font-mono">
+            {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'} <span className="text-[10px] font-normal text-[#666666]">/ 1000</span>
           </div>
-          <div className="text-[9px] text-[#666666]">Escala Oficial MEC</div>
+          <div className="text-[8px] text-[#666666]">Escala Oficial MEC</div>
         </div>
       </div>
 
       {/* SECTION 1: TABELA COMPACTA DE COMPETÊNCIAS ENEM (C1 A C5) */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+      <div className="space-y-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <h2 className="text-[10px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
           1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
         </h2>
 
-        <table className="w-full text-left border-collapse text-xs border border-[#111111]">
+        <table className="w-full text-left border-collapse text-[9.5px] border border-[#111111]">
           <thead>
-            <tr className="bg-[#f2f2f2] border-b border-[#111111] font-mono text-[10px] uppercase">
-              <th className="p-2 border-r border-[#111111] w-1/4">Competência</th>
-              <th className="p-2 border-r border-[#111111] text-center w-16">Nota</th>
-              <th className="p-2 border-r border-[#111111] w-1/3">Citação Direta do Texto</th>
-              <th className="p-2">Parecer Pedagógico</th>
+            <tr className="bg-[#f2f2f2] border-b border-[#111111] font-mono text-[9px] uppercase">
+              <th className="p-1.5 border-r border-[#111111] w-1/4">Competência</th>
+              <th className="p-1.5 border-r border-[#111111] text-center w-14">Nota</th>
+              <th className="p-1.5 border-r border-[#111111] w-1/3">Citação Direta do Texto</th>
+              <th className="p-1.5">Parecer Pedagógico</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#111111]">
             {enemCompetenciasMap.map(({ key, title }) => {
               const comp = enem[key] || { nota: 0, citacao_texto: 'Elemento ausente', justificativa: 'Não avaliado' };
               return (
-                <tr key={key} className="align-top text-[11px]">
-                  <td className="p-2 border-r border-[#111111] font-semibold text-[#111111]">
+                <tr key={key} className="align-top" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                  <td className="p-1.5 border-r border-[#111111] font-semibold text-[#111111]">
                     {title}
                   </td>
-                  <td className="p-2 border-r border-[#111111] text-center font-mono font-bold text-sm">
+                  <td className="p-1.5 border-r border-[#111111] text-center font-mono font-bold text-xs">
                     {comp.nota}
                   </td>
-                  <td className="p-2 border-r border-[#111111] font-mono text-[10px] italic bg-[#fafafa]">
+                  <td className="p-1.5 border-r border-[#111111] font-mono text-[8.5px] italic bg-[#fafafa]">
                     {comp.citacao_texto ? `"${comp.citacao_texto}"` : '—'}
                   </td>
-                  <td className="p-2 leading-tight text-[#333333]">
+                  <td className="p-1.5 leading-tight text-[#222222]">
                     {comp.justificativa}
                   </td>
                 </tr>
@@ -178,25 +178,25 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       </div>
 
       {/* SECTION 2: MATRIZ SISEDU (PROJETO ÁGORA) */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+      <div className="space-y-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <h2 className="text-[10px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
           2. RUBRICAS QUALITATIVAS SISEDU (PROJETO ÁGORA ESCOLAR)
         </h2>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           {/* Dimensão Discursiva */}
-          <div className="border border-[#111111] p-3 space-y-2 rounded">
-            <h3 className="font-bold text-[11px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Discursiva</h3>
-            <div className="space-y-1.5 text-[10px]">
+          <div className="border border-[#111111] p-2 space-y-1 rounded">
+            <h3 className="font-bold text-[10px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-0.5">Dimensão Discursiva</h3>
+            <div className="space-y-1 text-[9px]">
               {siseduDiscursivaMap.map(({ key, title }) => {
                 const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', justificativa: '—' };
                 return (
-                  <div key={key} className="border-b border-[#eeeeee] pb-1 last:border-b-0">
+                  <div key={key} className="border-b border-[#eeeeee] pb-0.5 last:border-b-0">
                     <div className="flex justify-between font-semibold text-[#111111]">
                       <span>{title}:</span>
                       <span className="font-mono underline">{item.nivel}</span>
                     </div>
-                    <p className="text-[#444444] leading-tight text-[9.5px] mt-0.5">{item.justificativa}</p>
+                    <p className="text-[#444444] leading-tight text-[8.5px] mt-0.5">{item.justificativa}</p>
                   </div>
                 );
               })}
@@ -204,18 +204,18 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Dimensão Ético-Moral */}
-          <div className="border border-[#111111] p-3 space-y-2 rounded">
-            <h3 className="font-bold text-[11px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Ético-Moral</h3>
-            <div className="space-y-1.5 text-[10px]">
+          <div className="border border-[#111111] p-2 space-y-1 rounded">
+            <h3 className="font-bold text-[10px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-0.5">Dimensão Ético-Moral</h3>
+            <div className="space-y-1 text-[9px]">
               {siseduEticoMoralMap.map(({ key, title }) => {
                 const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', justificativa: '—' };
                 return (
-                  <div key={key} className="border-b border-[#eeeeee] pb-1 last:border-b-0">
+                  <div key={key} className="border-b border-[#eeeeee] pb-0.5 last:border-b-0">
                     <div className="flex justify-between font-semibold text-[#111111]">
                       <span>{title}:</span>
                       <span className="font-mono underline">{item.nivel}</span>
                     </div>
-                    <p className="text-[#444444] leading-tight text-[9.5px] mt-0.5">{item.justificativa}</p>
+                    <p className="text-[#444444] leading-tight text-[8.5px] mt-0.5">{item.justificativa}</p>
                   </div>
                 );
               })}
@@ -225,25 +225,25 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       </div>
 
       {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO */}
-      <div className="space-y-1.5">
-        <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
+      <div className="space-y-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <h2 className="text-[10px] font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-0.5 font-mono">
           3. TRANSCRIÇÃO INTEGRAL DO TEXTO DA REDAÇÃO (VERBATIM)
         </h2>
-        <div className="p-3 border border-[#111111] bg-[#fafafa] font-mono text-[10.5px] leading-relaxed whitespace-pre-wrap text-[#111111]">
+        <div className="p-2 border border-[#111111] bg-[#fafafa] font-mono text-[8.5px] leading-snug whitespace-pre-wrap text-[#111111]">
           {fullTextContent}
         </div>
       </div>
 
       {/* Footer & Teacher Signature Box */}
-      <div className="pt-4 flex justify-between items-end text-[10px] font-mono border-t border-[#111111] text-[#444444]">
+      <div className="pt-2 flex justify-between items-end text-[9px] font-mono border-t border-[#111111] text-[#444444]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
         <div>
           <div>Documento gerado pelo Sistema Ágora ENEM em {printDateStr}.</div>
           <div>Validação Pedagógica Automática via Inteligência Artificial.</div>
         </div>
 
-        <div className="text-center w-64 border-t border-[#111111] pt-1">
+        <div className="text-center w-56 border-t border-[#111111] pt-1">
           <div className="font-bold text-[#111111] font-sans">Assinatura do Professor / Avaliador</div>
-          <div className="text-[9px] text-[#666666]">Visto de Validação Pedagógica</div>
+          <div className="text-[8px] text-[#666666]">Visto de Validação Pedagógica</div>
         </div>
       </div>
 
@@ -366,19 +366,6 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           <div className="px-6 border-b border-[#e6e5e0] bg-[#fafaf7] flex gap-4 overflow-x-auto custom-scrollbar">
             <button
               type="button"
-              onClick={() => setActiveTab('ficha')}
-              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-                activeTab === 'ficha'
-                  ? 'border-[#f54e00] text-[#f54e00]'
-                  : 'border-transparent text-[#807d72] hover:text-[#26251e]'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              📄 Ficha Oficial Eco PDF
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveTab('enem')}
               className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === 'enem'
@@ -420,9 +407,6 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           {/* Modal Body */}
           <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
             
-            {/* TAB 0: MINIMALIST OFFICIAL PDF PREVIEW */}
-            {activeTab === 'ficha' && renderMinimalistOfficialSheet()}
-
             {/* TAB 1: ENEM MATRIX */}
             {activeTab === 'enem' && (
               <div className="space-y-4">
@@ -646,6 +630,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
         </div>
+      </div>
+
+      {/* HIDDEN PDF TEMPLATE (RENDERED OFF-SCREEN ONLY WHEN USER CLICKS DOWNLOAD PDF) */}
+      <div className="fixed top-0 -left-[9999px] pointer-events-none z-[-100]">
+        {renderMinimalistOfficialSheet()}
       </div>
     </>
   );
