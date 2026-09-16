@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check } from 'lucide-react';
+import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer } from 'lucide-react';
 import { updateNomeAluno } from '../db/db';
 
 export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
@@ -108,6 +108,15 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 <div className="text-2xl font-bold text-[#f54e00]">{enem.nota_total_enem} <span className="text-xs font-normal text-[#807d72]">/ 1000</span></div>
               </div>
             )}
+
+            <button
+              onClick={() => window.print()}
+              className="px-3 py-2 rounded-md bg-[#26251e] hover:bg-[#000000] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Baixar ou Imprimir Boletim em PDF"
+            >
+              <Printer className="w-4 h-4" />
+              <span>PDF / Imprimir</span>
+            </button>
 
             <button
               onClick={onClose}

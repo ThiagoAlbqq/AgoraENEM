@@ -122,6 +122,64 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
         </div>
       </div>
 
+      {/* Class Comparison Panel (Desempenho Comparativo por Turma) */}
+      <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
+        <h3 className="text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
+          <Compass className="w-4 h-4 text-[#807d72]" />
+          Desempenho Comparativo por Turma Escolar
+        </h3>
+
+        {(() => {
+          const turmaStatsMap = {};
+          correctedList.forEach((r) => {
+            const turmaName = r.turma_aluno || r.extracted_data?.turma || 'Sem Turma Definida';
+            if (!turmaStatsMap[turmaName]) {
+              turmaStatsMap[turmaName] = { count: 0, totalScore: 0 };
+            }
+            turmaStatsMap[turmaName].count += 1;
+            turmaStatsMap[turmaName].totalScore += (r.nota_final || 0);
+          });
+
+          const turmaStats = Object.keys(turmaStatsMap).map((turma) => ({
+            turma,
+            count: turmaStatsMap[turma].count,
+            avgScore: Math.round(turmaStatsMap[turma].totalScore / turmaStatsMap[turma].count)
+          }));
+
+          if (turmaStats.length === 0) {
+            return (
+              <div className="p-4 text-center text-xs text-[#807d72] bg-[#fafaf7] rounded-lg border border-[#e6e5e0]">
+                Ainda não existem dados de turmas corrigidas para exibir o comparativo.
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {turmaStats.map((item, idx) => (
+                <div key={idx} className="bg-[#fafaf7] border border-[#e6e5e0] p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-xs text-[#26251e] truncate">{item.turma}</span>
+                    <span className="text-[10px] font-mono text-[#807d72] bg-[#e6e5e0] px-1.5 py-0.5 rounded">
+                      {item.count} aluno(s)
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold font-mono text-[#f54e00]">
+                    {item.avgScore} <span className="text-xs font-normal text-[#807d72]">pts</span>
+                  </div>
+                  <div className="w-full bg-[#e6e5e0] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#f54e00] rounded-full transition-all duration-500"
+                      style={{ width: `${(item.avgScore / 1000) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Recent Redações List */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
         <div className="flex items-center justify-between">

@@ -42,13 +42,13 @@ export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsC
         </button>
       </div>
 
-      {/* AI Multi-Agent Status Pill (Peach & Mint Pastels) */}
+      {/* AI Agent Status Pill */}
       {!isCollapsed && (
         <div className="m-3 p-3 bg-[#ffffff] border border-[#e6e5e0] rounded-lg flex items-center gap-2.5 text-xs text-[#5a5852]">
           <Bot className="w-4 h-4 text-[#f54e00] shrink-0" />
           <div>
-            <span className="font-semibold text-[#26251e] block text-[11px]">Multi-Agente Ativo</span>
-            <span className="text-[10px] text-[#807d72] font-mono">OCR Vision + Evaluator</span>
+            <span className="font-semibold text-[#26251e] block text-[11px]">Agente Único Ativo</span>
+            <span className="text-[10px] text-[#807d72] font-mono">OCR + Avaliação (1 Pass)</span>
           </div>
         </div>
       )}

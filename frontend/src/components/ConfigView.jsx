@@ -38,55 +38,26 @@ export default function ConfigView() {
         </div>
       </div>
 
-      {/* Multi-Agent AI Config Card */}
+      {/* Unified AI Config Card */}
       <div className="bg-white border border-[#e6e5e0] rounded-xl p-6 space-y-4">
         <h3 className="text-xs font-mono font-bold text-[#26251e] uppercase tracking-wider flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#f54e00]" />
-          Arquitetura Multi-Agente Ativa (3 Agentes Gemini 2.5 Flash)
+          Arquitetura IA: Agente Único Multimodal (Gemini 3.5 Flash Lite)
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          {/* Agente 0 */}
-          <div className="p-4 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-[#684b39] font-bold">
-              <UserCheck className="w-4 h-4 text-[#dfa88f]" />
-              Agente 0: Vision Header
+        <div className="p-4 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg space-y-3 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold text-[#26251e]">
+              <Sparkles className="w-4 h-4 text-[#f54e00]" />
+              <span>Agente Único Unificado (OCR + ENEM C1-C5 + Rubricas Sisedu)</span>
             </div>
-            <span className="inline-block font-mono text-[10px] px-2 py-0.5 rounded bg-[#dfa88f]/30 border border-[#dfa88f] text-[#422919] font-bold">
-              STAGED / DETECTOR
+            <span className="px-2.5 py-0.5 rounded bg-[#9fc9a2]/30 text-[#244525] border border-[#9fc9a2] text-[10px] font-mono font-bold">
+              1 CHAMADA / FOTO
             </span>
-            <p className="text-[#6b6960] text-[11px] leading-relaxed">
-              Analisa especificamente o cabeçalho superior da folha oficial de redação para detectar o NOME COMPLETO do aluno com 100% de acurácia.
-            </p>
           </div>
-
-          {/* Agente 1 */}
-          <div className="p-4 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-[#1d3b5e] font-bold">
-              <Cpu className="w-4 h-4 text-[#9fbbe0]" />
-              Agente 1: Transcritor OCR
-            </div>
-            <span className="inline-block font-mono text-[10px] px-2 py-0.5 rounded bg-[#9fbbe0]/30 border border-[#9fbbe0] text-[#162e4a] font-bold">
-              FULL TEXT / VERBATIM
-            </span>
-            <p className="text-[#6b6960] text-[11px] leading-relaxed">
-              Modelo Gemini Flash dedicado a extrair a transcrição palavra por palavra, preservando o texto integral do aluno sem cortes ou resumos.
-            </p>
-          </div>
-
-          {/* Agente 2 */}
-          <div className="p-4 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-[#4c3666] font-bold">
-              <Sparkles className="w-4 h-4 text-[#c0a8dd]" />
-              Agente 2: Banca Avaliadora
-            </div>
-            <span className="inline-block font-mono text-[10px] px-2 py-0.5 rounded bg-[#c0a8dd]/30 border border-[#c0a8dd] text-[#36234b] font-bold">
-              ENEM C1-C5 + SISEDU
-            </span>
-            <p className="text-[#6b6960] text-[11px] leading-relaxed">
-              Recebe a transcrição integral e calcula as 5 competências (0-200 cada), níveis Sisedu e extrai citações diretas com trechos e linhas exatas.
-            </p>
-          </div>
+          <p className="text-[#6b6960] text-[11px] leading-relaxed">
+            Otimizado para economia de requisições (15 RPM). Realiza a leitura visual da imagem, a transcrição 100% integral do texto e o cálculo das 5 competências do ENEM com citações obrigatórias em uma **única passada multimodal**.
+          </p>
         </div>
       </div>
 
