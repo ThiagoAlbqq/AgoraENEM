@@ -274,13 +274,13 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   return (
     <>
       {/* SCREEN MODAL VIEW */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn no-print">
-        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn no-print">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-5xl max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
 
           {/* Modal Header */}
-          <div className="p-5 border-b border-[#e6e5e0] bg-[#fafaf7] flex items-start justify-between gap-4">
+          <div className="p-4 sm:p-5 border-b border-[#e6e5e0] bg-[#fafaf7] flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
                 {isIdentified ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#e6e5e0] text-[#26251e]">
                     <UserCheck className="w-3.5 h-3.5 text-[#1f8a65]" />
@@ -304,16 +304,16 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 </span>
               </div>
 
-              <h3 className="text-xl font-normal text-[#26251e] tracking-tight mt-1">
+              <h3 className="text-base sm:text-xl font-normal text-[#26251e] tracking-tight mt-1">
                 Relatório de Avaliação Cruzada (ENEM x Sisedu Projeto Ágora)
               </h3>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto">
               {enem.nota_total_enem !== undefined && (
-                <div className="px-4 py-2 rounded-lg border border-[#e6e5e0] bg-[#ffffff] text-center font-mono">
-                  <div className="text-[10px] uppercase font-semibold text-[#807d72]">Nota ENEM</div>
-                  <div className="text-2xl font-bold text-[#f54e00]">{enem.nota_total_enem} <span className="text-xs font-normal text-[#807d72]">/ 1000</span></div>
+                <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-[#e6e5e0] bg-[#ffffff] text-center font-mono">
+                  <div className="text-[9px] sm:text-[10px] uppercase font-semibold text-[#807d72]">Nota ENEM</div>
+                  <div className="text-xl sm:text-2xl font-bold text-[#f54e00]">{enem.nota_total_enem} <span className="text-xs font-normal text-[#807d72]">/ 1000</span></div>
                 </div>
               )}
 
@@ -321,18 +321,19 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 type="button"
                 disabled={isGeneratingPDF}
                 onClick={handleDownloadPDF}
-                className="px-4 py-2 rounded-md bg-[#26251e] hover:bg-[#000000] text-white text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-3 sm:px-4 py-2 rounded-md bg-[#26251e] hover:bg-[#000000] text-white text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer disabled:opacity-50"
                 title="Baixar Boletim em formato PDF"
               >
                 {isGeneratingPDF ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Gerando PDF...</span>
+                    <span className="hidden sm:inline">Gerando PDF...</span>
                   </>
                 ) : (
                   <>
                     <Download className="w-4 h-4 text-[#f54e00]" />
-                    <span>Baixar PDF Oficial</span>
+                    <span className="hidden sm:inline">Baixar PDF</span>
+                    <span className="sm:hidden">PDF</span>
                   </>
                 )}
               </button>

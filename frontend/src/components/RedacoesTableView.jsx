@@ -84,9 +84,106 @@ export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, o
         </div>
       </div>
 
-      {/* Enterprise Data Table */}
+      {/* Responsive Container: Mobile Cards (<md) vs Enterprise Table (>=md) */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl overflow-hidden shadow-none">
-        <div className="overflow-x-auto">
+        
+        {/* MOBILE CARD VIEW (<768px) */}
+        <div className="block md:hidden divide-y divide-[#e6e5e0]">
+          {filteredRedacoes.length === 0 ? (
+            <div className="p-8 text-center text-[#807d72]">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
+              Nenhuma redação encontrada para os filtros selecionados.
+            </div>
+          ) : (
+            filteredRedacoes.map((item) => {
+              const isIdentified = item.nome_detectado && item.nome_aluno;
+              const ext = item.extracted_data || {};
+              const enemScore = ext.avaliacoes?.enem?.nota_total_enem ?? item.nota_final;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => item.is_synced && onSelectRedacao(item)}
+                  className={`p-4 space-y-3 hover:bg-[#fafaf7] transition-colors ${
+                    item.is_synced ? 'cursor-pointer' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-[#26251e]">
+                        #{String(item.id).padStart(4, '0')}
+                      </span>
+                      {item.is_synced ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#9fc9a2] text-[#26251e] text-[9px] font-mono font-medium">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          CORRIGIDO
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#dfa88f] text-[#26251e] text-[9px] font-mono font-medium">
+                          <Clock className="w-2.5 h-2.5" />
+                          PENDENTE
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      {item.is_synced && enemScore !== null && enemScore !== undefined ? (
+                        <span className="px-2.5 py-1 rounded-full bg-[#e6e5e0] text-[#26251e] font-bold font-mono text-xs">
+                          {enemScore} pts
+                        </span>
+                      ) : (
+                        <span className="text-[#a09c92] font-mono text-xs">—</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    {isIdentified ? (
+                      <div className="font-semibold text-sm text-[#26251e]">
+                        {item.nome_aluno}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#26251e] bg-[#dfa88f] px-2 py-0.5 rounded-full">
+                        <UserX className="w-3 h-3 text-[#26251e]" />
+                        Sem Nome (Guardada)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-[#807d72] font-mono pt-1 border-t border-[#f0efe9]">
+                    <div className="flex items-center gap-3">
+                      <span>Turma: <strong className="text-[#26251e]">{item.turma_aluno || ext.turma || 'N/A'}</strong></span>
+                      <span>•</span>
+                      <span>{new Date(item.data_captura).toLocaleDateString('pt-BR')}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => item.is_synced && onSelectRedacao(item)}
+                        className="p-1 text-[#807d72] hover:text-[#26251e]"
+                        title="Ver Boletim"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRedacao(item.id)}
+                        className="p-1 text-[#a09c92] hover:text-[#cf2d56]"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* DESKTOP TABLE VIEW (>=768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#fafaf7] border-b border-[#e6e5e0] text-[#807d72] uppercase font-mono text-[11px] tracking-wider">

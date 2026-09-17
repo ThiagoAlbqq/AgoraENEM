@@ -34,24 +34,24 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
     <div className="space-y-6">
       
       {/* Hero Band / Editorial Welcome */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-8 shadow-none relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-8 shadow-none relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#e6e5e0] text-[#26251e] mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-mono font-medium bg-[#e6e5e0] text-[#26251e] mb-2 sm:mb-3">
               <Sparkles className="w-3.5 h-3.5 text-[#f54e00]" />
               Multi-Agente IA (Vision OCR + Evaluator)
             </div>
-            <h2 className="text-3xl font-normal text-[#26251e] tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-normal text-[#26251e] tracking-tight">
               Painel Geral de Desempenho
             </h2>
-            <p className="text-sm text-[#5a5852] mt-1 max-w-xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#5a5852] mt-1 max-w-xl leading-relaxed">
               Análise textual cruzada baseada na Matriz do ENEM (0-1000) e Rubricas Qualitativas Sisedu (Projeto Ágora Escolar).
             </p>
           </div>
 
           <button
             onClick={onNavigateToUpload}
-            className="px-5 py-3 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs uppercase tracking-wider rounded-md transition-all shrink-0 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-3 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs uppercase tracking-wider rounded-md transition-all shrink-0 cursor-pointer text-center"
           >
             + Nova Correção em Lote
           </button>
@@ -59,52 +59,52 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
       </div>
 
       {/* Main KPI Stat Cards (White cards, hairline borders, timeline pastels) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl">
           <div className="flex items-center justify-between text-[#807d72] mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total de Redações</span>
             <FileText className="w-4 h-4 text-[#807d72]" />
           </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{totalCount}</div>
+          <div className="text-2xl sm:text-3xl font-normal font-mono text-[#26251e]">{totalCount}</div>
           <div className="text-xs text-[#807d72] mt-1 font-mono">{correctedList.length} corrigidas com sucesso</div>
         </div>
 
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl">
           <div className="flex items-center justify-between text-[#807d72] mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Média Geral ENEM</span>
             <Award className="w-4 h-4 text-[#f54e00]" />
           </div>
-          <div className="text-3xl font-normal font-mono text-[#f54e00]">{avgScore > 0 ? avgScore : '—'}</div>
+          <div className="text-2xl sm:text-3xl font-normal font-mono text-[#f54e00]">{avgScore > 0 ? avgScore : '—'}</div>
           <div className="text-xs text-[#807d72] mt-1 font-mono">escala 0 a 1000 pontos</div>
         </div>
 
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl">
           <div className="flex items-center justify-between text-[#807d72] mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Alunos Identificados</span>
             <UserCheck className="w-4 h-4 text-[#1f8a65]" />
           </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{identifiedCount}</div>
+          <div className="text-2xl sm:text-3xl font-normal font-mono text-[#26251e]">{identifiedCount}</div>
           <div className="text-xs text-[#807d72] mt-1 font-mono">vinculados a nome e turma</div>
         </div>
 
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl">
           <div className="flex items-center justify-between text-[#26251e] mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Sem Nome (Guardadas)</span>
             <AlertTriangle className="w-4 h-4 text-[#c08532]" />
           </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{unidentifiedCount}</div>
+          <div className="text-2xl sm:text-3xl font-normal font-mono text-[#26251e]">{unidentifiedCount}</div>
           <div className="text-xs text-[#807d72] mt-1 font-mono">necessitam atribuição de nome</div>
         </div>
       </div>
 
       {/* ENEM Competencies Average Chart (Signature AI Pastel Timeline Palette) */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
-        <h3 className="text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-4">
+        <h3 className="text-base sm:text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
           <Award className="w-4 h-4 text-[#f54e00]" />
           Média Geral por Competência do ENEM (C1 a C5)
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {compStats.map((item, idx) => (
             <div key={idx} className="bg-[#fafaf7] border border-[#e6e5e0] p-4 rounded-lg space-y-2">
               <div className="text-xs font-semibold text-[#26251e] truncate">{item.label}</div>

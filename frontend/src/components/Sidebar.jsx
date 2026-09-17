@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, PlusCircle, Database, AlertTriangle, Settings, Award, ChevronLeft, ChevronRight, Bot } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Database, AlertTriangle, Settings, Award, ChevronLeft, ChevronRight, Bot, X } from 'lucide-react';
 
-export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsCollapsed, pendingCount, unidentifiedCount }) {
+export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsCollapsed, isMobileMenuOpen, setIsMobileMenuOpen, pendingCount, unidentifiedCount }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard },
     { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
@@ -12,13 +12,13 @@ export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsC
 
   return (
     <aside
-      className={`bg-[#fafaf7] border-r border-[#e6e5e0] flex flex-col transition-all duration-300 z-30 ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
+      className={`bg-[#fafaf7] border-r border-[#e6e5e0] flex flex-col transition-all duration-300 z-40 fixed inset-y-0 left-0 md:static md:translate-x-0 ${
+        isMobileMenuOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
+      } ${isCollapsed ? 'md:w-20' : 'md:w-64'}`}
     >
       {/* Brand Header */}
       <div className="p-4 border-b border-[#e6e5e0] flex items-center justify-between">
-        {!isCollapsed ? (
+        {(!isCollapsed || isMobileMenuOpen) ? (
           <div className="flex items-center gap-2.5">
             <div className="bg-[#f54e00] p-2 rounded-md text-white shadow-none">
               <Award className="w-5 h-5" />
@@ -34,9 +34,19 @@ export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsC
           </div>
         )}
 
+        {/* Mobile Close Button */}
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] md:hidden cursor-pointer"
+          title="Fechar Menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Desktop Collapse Toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] transition-colors"
+          className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] transition-colors hidden md:block cursor-pointer"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

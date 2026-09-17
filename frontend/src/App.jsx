@@ -12,6 +12,7 @@ import { syncOfflineDocuments } from './services/syncService';
 function App() {
   const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'novo' | 'tabela' | 'sem_nome' | 'config'
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [redacoes, setRedacoes] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -72,24 +73,35 @@ function App() {
   const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.nome_detectado || !r.nome_aluno)).length;
 
   return (
-    <div className="h-screen w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
+    <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
       
+      {/* Mobile Drawer Backdrop Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 md:hidden animate-fadeIn"
+        />
+      )}
+
       {/* Enterprise Navigation Sidebar */}
       <Sidebar
         activeView={activeView}
         setActiveView={(view) => {
           setActiveView(view);
+          setIsMobileMenuOpen(false);
           if (view === 'sem_nome') setFilterTab('sem_nome');
           else if (view === 'tabela') setFilterTab('todas');
         }}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
         pendingCount={pendingCount}
         unidentifiedCount={unidentifiedCount}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         
         {/* Enterprise Top Header */}
         <Header
@@ -98,6 +110,8 @@ function App() {
           onSync={handleSync}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
 
         {/* Global Toast Feedback Notification Banner */}
