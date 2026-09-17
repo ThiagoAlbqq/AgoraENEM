@@ -102,7 +102,14 @@ export const authService = {
       body: JSON.stringify({ redacoes: localRedacoes })
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      const text = await response.text();
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Erro na sincronização: o backend retornou uma página inválida em vez de dados (provavelmente está offline ou o servidor caiu).');
+    }
+
     if (!response.ok) {
       throw new Error(data.error || 'Erro ao sincronizar com a nuvem.');
     }
