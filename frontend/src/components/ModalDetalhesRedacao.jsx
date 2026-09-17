@@ -329,59 +329,56 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
         <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-4xl h-[650px] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
 
           {/* Header Bar */}
-          <div className="bg-[#fafaf7] border-b border-[#e6e5e0] px-5 py-3.5 flex items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#f54e00]">
-                <GraduationCap className="w-4 h-4" />
+          <div className="bg-[#fafaf7] border-b border-[#e6e5e0] px-4 sm:px-5 py-3 space-y-2 shrink-0">
+            {/* Top Row: Name, Status & Close Button */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <div className="w-7 h-7 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#f54e00]">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight truncate max-w-[200px] xs:max-w-[300px] sm:max-w-none">
+                  {data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}
+                </h3>
+                {isIdentified ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#9fc9a2]/30 text-[#1f8a65] shrink-0">
+                    <UserCheck className="w-3 h-3" />
+                    Identificado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#dfa88f]/30 text-[#f54e00] shrink-0">
+                    <UserX className="w-3 h-3" />
+                    Sem Nome
+                  </span>
+                )}
               </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-[#26251e] tracking-tight truncate">
-                    {data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}
-                  </h3>
-
-                  {isIdentified ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium bg-[#9fc9a2]/30 text-[#1f8a65]">
-                      <UserCheck className="w-3 h-3" />
-                      Identificado
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium bg-[#dfa88f]/30 text-[#f54e00]">
-                      <UserX className="w-3 h-3" />
-                      Sem Nome
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-mono text-[#807d72] mt-0.5">
-                  <span>ID #{String(redacao.id).padStart(4, '0')}</span>
-                  <span>•</span>
-                  <span>{data.turma || redacao.turma_aluno || 'Geral'}</span>
-                  <span>•</span>
-                  <span>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Score & Close */}
-            <div className="flex items-center gap-3 shrink-0">
-              {enem.nota_total_enem !== undefined && (
-                <div className="px-3 py-1 rounded-md border border-[#dfa88f] bg-[#dfa88f]/20 font-mono text-xs flex items-baseline gap-1">
-                  <span className="text-[10px] font-bold text-[#807d72]">NOTA ENEM:</span>
-                  <span className="text-base font-bold text-[#f54e00]">{enem.nota_total_enem}</span>
-                  <span className="text-[10px] text-[#807d72]">/1000</span>
-                </div>
-              )}
 
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-md hover:bg-[#e6e5e0] text-[#807d72] hover:text-[#26251e] transition-colors cursor-pointer"
+                className="p-1.5 rounded-md hover:bg-[#e6e5e0] text-[#807d72] hover:text-[#26251e] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Bottom Row: Metadata Chips + Score Badge */}
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-mono text-[#807d72]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-[#ffffff] px-2 py-0.5 rounded border border-[#e6e5e0]">ID #{String(redacao.id).padStart(4, '0')}</span>
+                <span>•</span>
+                <span className="bg-[#ffffff] px-2 py-0.5 rounded border border-[#e6e5e0]">{data.turma || redacao.turma_aluno || 'Geral'}</span>
+                <span>•</span>
+                <span>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</span>
+              </div>
+
+              {enem.nota_total_enem !== undefined && (
+                <div className="px-2.5 py-0.5 rounded border border-[#dfa88f] bg-[#dfa88f]/20 font-mono text-xs flex items-baseline gap-1 shrink-0">
+                  <span className="text-[10px] font-bold text-[#807d72]">NOTA ENEM:</span>
+                  <span className="text-sm font-bold text-[#f54e00]">{enem.nota_total_enem}</span>
+                  <span className="text-[10px] text-[#807d72]">/1000</span>
+                </div>
+              )}
             </div>
           </div>
 
