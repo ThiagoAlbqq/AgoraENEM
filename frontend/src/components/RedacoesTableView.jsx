@@ -1,15 +1,17 @@
 import React from 'react';
 import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
-  
+  const { isAdmin, isEstudante } = useAuth();
+
   const filteredRedacoes = redacoes.filter((item) => {
     const ext = item.extracted_data || {};
     const aluno = item.nome_aluno || ext.aluno || '';
     const turma = item.turma_aluno || ext.turma || '';
     const idStr = String(item.id);
 
-    const matchesSearch = !searchQuery.trim() || 
+    const matchesSearch = !searchQuery.trim() ||
       aluno.toLowerCase().includes(searchQuery.toLowerCase()) ||
       turma.toLowerCase().includes(searchQuery.toLowerCase()) ||
       idStr.includes(searchQuery);
@@ -31,10 +33,12 @@ export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, o
         <div>
           <h3 className="text-base font-normal text-[#26251e] tracking-tight flex items-center gap-2">
             <Award className="w-4 h-4 text-[#f54e00]" />
-            Repositório Geral de Redações ({filteredRedacoes.length})
+            {isAdmin ? `Repositório Geral de Redações (${filteredRedacoes.length})` : `Minhas Redações Avaliadas (${filteredRedacoes.length})`}
           </h3>
           <p className="text-xs text-[#807d72]">
-            Tabela analítica de acompanhamento de alunos e notas ENEM / Sisedu
+            {isAdmin
+              ? 'Tabela analítica de acompanhamento de alunos e notas ENEM / Sisedu'
+              : 'Boletim individual de acompanhamento das suas correções validadas'}
           </p>
         </div>
 
@@ -42,187 +46,168 @@ export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, o
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
           <button
             onClick={() => setFilterTab('todas')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${
-              filterTab === 'todas'
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'todas'
                 ? 'bg-[#26251e] text-white border-[#26251e]'
                 : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-            }`}
+              }`}
           >
             Todas ({redacoes.length})
           </button>
-          <button
-            onClick={() => setFilterTab('identificadas')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${
-              filterTab === 'identificadas'
-                ? 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]'
-                : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-            }`}
-          >
-            Com Nome
-          </button>
-          <button
-            onClick={() => setFilterTab('sem_nome')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${
-              filterTab === 'sem_nome'
-                ? 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]'
-                : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-[#26251e]" />
-            ⚠️ Sem Nome Guardadas
-          </button>
+
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => setFilterTab('identificadas')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'identificadas'
+                    ? 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]'
+                    : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                  }`}
+              >
+                Com Nome
+              </button>
+              <button
+                onClick={() => setFilterTab('sem_nome')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${filterTab === 'sem_nome'
+                    ? 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]'
+                    : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                  }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-[#26251e]" />
+                Sem Nome Guardadas
+              </button>
+            </>
+          )}
+
           <button
             onClick={() => setFilterTab('excelentes')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${
-              filterTab === 'excelentes'
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'excelentes'
                 ? 'bg-[#c08532] text-white border-[#c08532]'
                 : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-            }`}
+              }`}
           >
-            800+ pts
+            Notas ≥ 800
           </button>
         </div>
       </div>
 
-      {/* Enterprise Data Table */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl overflow-hidden shadow-none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#fafaf7] border-b border-[#e6e5e0] text-[#807d72] uppercase font-mono text-[11px] tracking-wider">
-                <th className="p-3.5 pl-4">ID</th>
-                <th className="p-3.5">Aluno</th>
-                <th className="p-3.5">Turma</th>
-                <th className="p-3.5">Data Envio</th>
-                <th className="p-3.5 text-center">Nota ENEM</th>
-                <th className="p-3.5 text-center">Matriz Sisedu</th>
-                <th className="p-3.5 text-center">Status</th>
-                <th className="p-3.5 text-right pr-4">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e6e5e0]">
-              {filteredRedacoes.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-[#807d72]">
-                    <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
-                    Nenhuma redação encontrada para os filtros selecionados.
-                  </td>
-                </tr>
-              ) : (
-                filteredRedacoes.map((item) => {
-                  const isIdentified = item.nome_detectado && item.nome_aluno;
-                  const ext = item.extracted_data || {};
-                  const enemScore = ext.avaliacoes?.enem?.nota_total_enem ?? item.nota_final;
+      {/* Main Card List Container */}
+      <div className="space-y-2.5">
+        {filteredRedacoes.length === 0 ? (
+          <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
+            <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
+            {isAdmin
+              ? 'Nenhuma redação encontrada para os filtros selecionados.'
+              : 'Nenhuma redação validada pelo professor encontrada para a sua conta.'}
+          </div>
+        ) : (
+          filteredRedacoes.map((item) => {
+            const isIdentified = item.nome_detectado && item.nome_aluno;
+            const ext = item.extracted_data || {};
+            const enemScore = ext.avaliacoes?.enem?.nota_total_enem ?? item.nota_final;
 
-                  return (
-                    <tr
-                      key={item.id}
-                      onClick={() => item.is_synced && onSelectRedacao(item)}
-                      className={`hover:bg-[#fafaf7] transition-colors ${
-                        item.is_synced ? 'cursor-pointer' : ''
-                      }`}
-                    >
-                      {/* ID */}
-                      <td className="p-3.5 pl-4 font-mono font-bold text-[#26251e]">
-                        #{String(item.id).padStart(4, '0')}
-                      </td>
+            return (
+              <div
+                key={item.id}
+                onClick={() => item.is_synced && onSelectRedacao(item)}
+                className={`bg-[#ffffff] hover:bg-[#fafaf7] border border-[#e6e5e0] hover:border-[#cfcdc4] rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 transition-all shadow-2xs ${
+                  item.is_synced ? 'cursor-pointer' : ''
+                }`}
+              >
+                {/* Header Row on Mobile / Left Info on Desktop */}
+                <div className="flex items-center justify-between sm:justify-start gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-none">
+                    <span className="font-mono text-xs font-bold text-[#807d72] shrink-0">
+                      #{String(item.id).padStart(4, '0')}
+                    </span>
 
-                      {/* Aluno */}
-                      <td className="p-3.5">
-                        {isIdentified ? (
-                          <div className="font-semibold text-[#26251e] truncate max-w-[180px]">
-                            {item.nome_aluno}
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#26251e] bg-[#dfa88f] px-2 py-0.5 rounded-full">
-                            <UserX className="w-3 h-3 text-[#26251e]" />
-                            Sem Nome (Guardada)
-                          </span>
-                        )}
-                      </td>
+                    {isIdentified ? (
+                      <span className="font-semibold text-xs sm:text-sm text-[#26251e] truncate">
+                        {item.nome_aluno}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#c08532] bg-[#dfa88f]/30 border border-[#dfa88f] px-2 py-0.5 rounded-full shrink-0">
+                        <UserX className="w-3 h-3 text-[#c08532]" />
+                        Sem Nome
+                      </span>
+                    )}
+                  </div>
 
-                      {/* Turma */}
-                      <td className="p-3.5 text-[#5a5852] font-mono">
-                        {item.turma_aluno || ext.turma ? (
-                          <span className="bg-[#e6e5e0] px-2 py-0.5 rounded text-[11px] text-[#26251e]">
-                            {item.turma_aluno || ext.turma}
-                          </span>
-                        ) : (
-                          <span className="text-[#a09c92] italic">N/A</span>
-                        )}
-                      </td>
+                  {/* Score Pill on Mobile Header (shown on mobile right, hidden on desktop sm:) */}
+                  {item.is_synced && enemScore !== null && enemScore !== undefined && (
+                    <div className="sm:hidden px-2.5 py-0.5 rounded-lg bg-[#fafaf7] border border-[#e6e5e0] text-center font-mono shrink-0">
+                      <span className="text-xs font-bold text-[#f54e00]">{enemScore}</span>
+                      <span className="text-[9px] text-[#807d72] ml-0.5">pts</span>
+                    </div>
+                  )}
+                </div>
 
-                      {/* Data */}
-                      <td className="p-3.5 font-mono text-[#807d72] text-[11px]">
-                        {new Date(item.data_captura).toLocaleDateString('pt-BR')}
-                      </td>
+                {/* Secondary Row on Mobile / Subtitle + Actions */}
+                <div className="flex items-center justify-between gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#e6e5e0]/60 flex-1">
+                  {/* Meta Details: Turma, Data, Status */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs text-[#807d72] font-mono">
+                    {(item.turma_aluno || ext.turma) && (
+                      <>
+                        <span className="text-xs text-[#5a5852] font-sans font-medium">
+                          {item.turma_aluno || ext.turma}
+                        </span>
+                        <span>•</span>
+                      </>
+                    )}
 
-                      {/* Nota ENEM */}
-                      <td className="p-3.5 text-center font-mono">
-                        {item.is_synced && enemScore !== null && enemScore !== undefined ? (
-                          <span className="px-3 py-1 rounded-full bg-[#e6e5e0] text-[#26251e] font-bold text-xs inline-block">
-                            {enemScore} pts
-                          </span>
-                        ) : (
-                          <span className="text-[#a09c92] font-mono">—</span>
-                        )}
-                      </td>
+                    <span className="text-[11px]">
+                      {new Date(item.data_captura).toLocaleDateString('pt-BR')}
+                    </span>
 
-                      {/* Sisedu */}
-                      <td className="p-3.5 text-center">
-                        {item.is_synced ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#9fbbe0] text-[#26251e] text-[10px] font-mono font-medium">
-                            <Compass className="w-3 h-3 text-[#26251e]" />
-                            Avaliado
-                          </span>
-                        ) : (
-                          <span className="text-[#a09c92] font-mono">—</span>
-                        )}
-                      </td>
+                    <span>•</span>
 
-                      {/* Status */}
-                      <td className="p-3.5 text-center">
-                        {item.is_synced ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#9fc9a2] text-[#26251e] text-[10px] font-mono font-medium">
-                            <CheckCircle2 className="w-3 h-3" />
-                            CORRIGIDO
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#dfa88f] text-[#26251e] text-[10px] font-mono font-medium">
-                            <Clock className="w-3 h-3" />
-                            PENDENTE
-                          </span>
-                        )}
-                      </td>
+                    {item.is_synced ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/40 border border-[#9fc9a2] text-[#1f8a65] text-[9.5px] font-mono font-bold">
+                        CORRIGIDO
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[#dfa88f]/40 border border-[#dfa88f] text-[#cf2d56] text-[9.5px] font-mono font-bold">
+                        PENDENTE
+                      </span>
+                    )}
+                  </div>
 
-                      {/* Actions */}
-                      <td className="p-3.5 text-right pr-4">
-                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => item.is_synced && onSelectRedacao(item)}
-                            className="p-1.5 text-[#807d72] hover:text-[#26251e] transition-colors"
-                            title="Ver Boletim"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteRedacao(item.id)}
-                            className="p-1.5 text-[#a09c92] hover:text-[#cf2d56] transition-colors"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  {/* Desktop Score Pill & Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* Score Pill (Desktop Only) */}
+                    {item.is_synced && enemScore !== null && enemScore !== undefined && (
+                      <div className="hidden sm:block px-3 py-1.5 rounded-xl bg-[#fafaf7] border border-[#e6e5e0] text-center font-mono">
+                        <span className="text-sm sm:text-base font-bold text-[#f54e00]">{enemScore}</span>
+                        <span className="text-[10px] text-[#807d72] ml-0.5 font-normal">pts</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => item.is_synced && onSelectRedacao(item)}
+                        className="p-1.5 sm:p-2 rounded-lg bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] transition-colors cursor-pointer"
+                        title="Ver Boletim Completo"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteRedacao(item.id)}
+                          className="p-1.5 sm:p-2 rounded-lg bg-[#fafaf7] hover:bg-red-50 border border-[#e6e5e0] text-[#807d72] hover:text-[#cf2d56] transition-colors cursor-pointer"
+                          title="Excluir Redação"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

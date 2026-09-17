@@ -1,93 +1,210 @@
-import React from 'react';
-import { LayoutDashboard, PlusCircle, Database, AlertTriangle, Settings, Award, ChevronLeft, ChevronRight, Bot } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  PlusCircle, 
+  Database, 
+  AlertTriangle, 
+  Settings, 
+  Award, 
+  X, 
+  GraduationCap, 
+  LogOut, 
+  CloudUpload, 
+  Wifi, 
+  WifiOff, 
+  Shield 
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
-export default function Sidebar({ activeView, setActiveView, isCollapsed, setIsCollapsed, pendingCount, unidentifiedCount }) {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard },
-    { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
-    { id: 'tabela', label: 'Banco de Redações', icon: Database },
-    { id: 'sem_nome', label: 'Redações Sem Nome', icon: AlertTriangle, badge: unidentifiedCount },
-    { id: 'config', label: 'Configurações & API', icon: Settings }
+export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, setIsMobileMenuOpen, pendingCount, unidentifiedCount }) {
+  const { user, logout, isAdmin, isEstudante, syncLegacyToCloud } = useAuth();
+  const isOnline = useNetworkStatus();
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState(null);
+
+  if (!user) return null; // Completely hide sidebar when unauthenticated
+
+  const handleCloudSync = async () => {
+    setIsCloudSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const res = await syncLegacyToCloud();
+      setSyncFeedback(res.message);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    } catch (err) {
+      alert(err.message || 'Erro ao sincronizar com a nuvem.');
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const navSections = isAdmin ? [
+    {
+      title: 'Geral',
+      items: [
+        { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard }
+      ]
+    },
+    {
+      title: 'Gestão de Redações',
+      items: [
+        { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
+        { id: 'tabela', label: 'Banco de Redações', icon: Database },
+        { id: 'sem_nome', label: 'Redações Sem Nome', icon: AlertTriangle, badge: unidentifiedCount }
+      ]
+    },
+    {
+      title: 'Sistema',
+      items: [
+        { id: 'config', label: 'Configurações & API', icon: Settings }
+      ]
+    }
+  ] : [
+    {
+      title: 'Geral',
+      items: [
+        { id: 'dashboard', label: 'Minhas Notas & Desempenho', icon: LayoutDashboard }
+      ]
+    },
+    {
+      title: 'Desempenho',
+      items: [
+        { id: 'tabela', label: 'Minhas Redações Avaliadas', icon: GraduationCap }
+      ]
+    }
   ];
 
   return (
     <aside
-      className={`bg-[#fafaf7] border-r border-[#e6e5e0] flex flex-col transition-all duration-300 z-30 ${
-        isCollapsed ? 'w-20' : 'w-64'
+      className={`bg-[#ffffff] border-r border-[#e6e5e0] flex flex-col transition-all duration-300 z-40 fixed inset-y-0 left-0 md:static md:translate-x-0 md:w-64 ${
+        isMobileMenuOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
       }`}
     >
       {/* Brand Header */}
-      <div className="p-4 border-b border-[#e6e5e0] flex items-center justify-between">
-        {!isCollapsed ? (
-          <div className="flex items-center gap-2.5">
-            <div className="bg-[#f54e00] p-2 rounded-md text-white shadow-none">
-              <Award className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-normal text-base text-[#26251e] block tracking-tight">Ágora ENEM</span>
-              <span className="text-[11px] text-[#807d72] font-mono block">Design Cursor v1.0</span>
-            </div>
+      <div className="p-4 sm:p-5 border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-[#f54e00] p-1.5 rounded-md text-white shrink-0">
+            <Award className="w-4 h-4" />
           </div>
-        ) : (
-          <div className="bg-[#f54e00] p-2 rounded-md text-white shadow-none mx-auto">
-            <Award className="w-5 h-5" />
+          <div>
+            <span className="font-normal text-sm sm:text-base text-[#26251e] block tracking-tight">Ágora ENEM</span>
+            <span className="text-[10px] text-[#807d72] font-mono block">
+              {isAdmin ? 'Painel do Professor' : 'Portal do Aluno'}
+            </span>
           </div>
-        )}
+        </div>
 
+        {/* Mobile Close Button */}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] transition-colors"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="p-1 rounded-md bg-[#fafaf7] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] md:hidden cursor-pointer"
+          title="Fechar Menu"
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* AI Agent Status Pill */}
-      {!isCollapsed && (
-        <div className="m-3 p-3 bg-[#ffffff] border border-[#e6e5e0] rounded-lg flex items-center gap-2.5 text-xs text-[#5a5852]">
-          <Bot className="w-4 h-4 text-[#f54e00] shrink-0" />
-          <div>
-            <span className="font-semibold text-[#26251e] block text-[11px]">Agente Único Ativo</span>
-            <span className="text-[10px] text-[#807d72] font-mono">OCR + Avaliação (1 Pass)</span>
+      {/* Navigation Sections */}
+      <nav className="p-3 sm:p-4 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1">
+            <div className="px-2 pb-1 text-[10px] font-mono font-medium text-[#a09c92] uppercase tracking-wider">
+              {section.title}
+            </div>
+
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveView(item.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-normal transition-all group cursor-pointer ${
+                      isActive
+                        ? 'bg-[#fafaf7] text-[#26251e] border border-[#e6e5e0] font-semibold'
+                        : 'text-[#5a5852] hover:text-[#26251e] hover:bg-[#fafaf7] border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#f54e00]' : 'text-[#807d72] group-hover:text-[#26251e]'}`} />
+                    <span className="truncate">{item.label}</span>
+
+                    {item.badge > 0 && (
+                      <span className="ml-auto px-1.5 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-[#dfa88f]/40 border border-[#dfa88f] text-[#26251e]">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
-      {/* Navigation Links */}
-      <nav className="p-3 space-y-1 flex-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-
-          return (
+        {/* Cloud Migration Action for Admin */}
+        {isAdmin && (
+          <div className="pt-2 border-t border-[#e6e5e0]/60 space-y-1.5">
+            <div className="px-2 pb-1 text-[10px] font-mono font-medium text-[#a09c92] uppercase tracking-wider">
+              Sincronização
+            </div>
             <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-all group ${
-                isActive
-                  ? 'bg-[#ffffff] text-[#26251e] border border-[#cfcdc4] font-semibold'
-                  : 'text-[#5a5852] hover:text-[#26251e] hover:bg-[#efeee8] border border-transparent'
-              }`}
+              type="button"
+              onClick={handleCloudSync}
+              disabled={isCloudSyncing}
+              className="w-full py-1.5 px-2.5 rounded-lg text-xs font-normal border border-[#9fc9a2] bg-[#9fc9a2]/20 hover:bg-[#9fc9a2]/40 text-[#1f8a65] flex items-center justify-between transition-all cursor-pointer"
             >
-              <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#f54e00]' : 'text-[#807d72] group-hover:text-[#26251e]'}`} />
-              {!isCollapsed && <span className="truncate">{item.label}</span>}
-
-              {!isCollapsed && item.badge > 0 && (
-                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#dfa88f] text-[#26251e]">
-                  {item.badge}
-                </span>
-              )}
+              <span className="flex items-center gap-2 truncate">
+                <CloudUpload className={`w-3.5 h-3.5 shrink-0 ${isCloudSyncing ? 'animate-bounce' : ''}`} />
+                <span className="truncate">Subir p/ Nuvem</span>
+              </span>
             </button>
-          );
-        })}
+            {syncFeedback && (
+              <span className="block px-2 text-[9.5px] font-mono text-[#1f8a65]">
+                {syncFeedback}
+              </span>
+            )}
+          </div>
+        )}
       </nav>
 
-      {/* Sidebar Footer */}
-      {!isCollapsed && (
-        <div className="p-4 border-t border-[#e6e5e0] text-[10px] font-mono text-[#807d72] uppercase tracking-widest text-center">
-          Cursor Gothic // JetBrains Mono
+      {/* Sleek User Profile & Footer */}
+      <div className="p-3 sm:p-4 border-t border-[#e6e5e0] bg-[#fafaf7] shrink-0 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#26251e]">
+              {isAdmin ? (
+                <Shield className="w-3.5 h-3.5 text-amber-600" />
+              ) : (
+                <GraduationCap className="w-3.5 h-3.5 text-teal-600" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-xs text-[#26251e] truncate">{user.nome}</div>
+              <div className="text-[9.5px] font-mono text-[#807d72] flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-[#1f8a65]' : 'bg-[#c08532]'}`} />
+                <span>{isOnline ? 'Online' : 'Offline'}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            className="p-1.5 text-[#807d72] hover:text-[#cf2d56] hover:bg-red-50 rounded-md transition-colors cursor-pointer shrink-0"
+            title="Sair da Conta"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
-      )}
+
+        <div className="text-[9.5px] font-mono text-[#a09c92] text-center uppercase tracking-widest pt-1 border-t border-[#e6e5e0]/60">
+          Ágora ENEM v2.0
+        </div>
+      </div>
     </aside>
   );
 }

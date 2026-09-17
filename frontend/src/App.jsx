@@ -6,12 +6,20 @@ import UploaderView from './components/UploaderView';
 import RedacoesTableView from './components/RedacoesTableView';
 import ConfigView from './components/ConfigView';
 import ModalDetalhesRedacao from './components/ModalDetalhesRedacao';
+import LoginView from './components/LoginView';
+import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
 import { db, deleteRedacao } from './db/db';
 import { syncOfflineDocuments } from './services/syncService';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { authService } from './services/authService';
+import { X } from 'lucide-react';
 
-function App() {
+function AppContent() {
+  const { user, isAuthenticated, isAdmin, isEstudante } = useAuth();
   const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'novo' | 'tabela' | 'sem_nome' | 'config'
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [redacoes, setRedacoes] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -21,16 +29,53 @@ function App() {
 
   const loadRedacoes = async () => {
     try {
+      if (isAuthenticated) {
+        // Fetch from central SQLite database
+        const cloudDocs = await authService.fetchCloudRedacoes();
+        if (cloudDocs && Array.isArray(cloudDocs)) {
+          // Student accounts must strictly use cloudDocs (even if empty [])
+          if (!isAdmin) {
+            setRedacoes(cloudDocs);
+            return;
+          }
+          // Admin account uses cloudDocs if available
+          if (cloudDocs.length > 0) {
+            setRedacoes(cloudDocs);
+            return;
+          }
+        }
+      }
+      
+      // Fallback or offline IndexedDB load
       const allDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-      setRedacoes(allDocs);
+      if (!isAdmin && user) {
+        // Strict filtering for student accounts on IndexedDB fallback
+        const cleanName = (user.nome || '').toLowerCase().trim();
+        const studentDocs = allDocs.filter(r => 
+          (r.user_id && Number(r.user_id) === Number(user.id)) ||
+          (cleanName && r.nome_aluno && r.nome_aluno.toLowerCase().trim() === cleanName)
+        );
+        setRedacoes(studentDocs);
+      } else if (!isAdmin && !user) {
+        setRedacoes([]);
+      } else {
+        setRedacoes(allDocs);
+      }
     } catch (error) {
       console.error('Falha ao carregar redações:', error);
+      if (!isAdmin) {
+        setRedacoes([]);
+      } else {
+        const allDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+        setRedacoes(allDocs);
+      }
     }
   };
 
+
   useEffect(() => {
     loadRedacoes();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, user]);
 
   const handleRedacaoSaved = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -72,24 +117,35 @@ function App() {
   const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.nome_detectado || !r.nome_aluno)).length;
 
   return (
-    <div className="h-screen w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
+    <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
       
+      {/* Mobile Drawer Backdrop Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 md:hidden animate-fadeIn"
+        />
+      )}
+
       {/* Enterprise Navigation Sidebar */}
-      <Sidebar
-        activeView={activeView}
-        setActiveView={(view) => {
-          setActiveView(view);
-          if (view === 'sem_nome') setFilterTab('sem_nome');
-          else if (view === 'tabela') setFilterTab('todas');
-        }}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-        pendingCount={pendingCount}
-        unidentifiedCount={unidentifiedCount}
-      />
+      {isAuthenticated && (
+        <Sidebar
+          activeView={activeView}
+          setActiveView={(view) => {
+            setActiveView(view);
+            setIsMobileMenuOpen(false);
+            if (view === 'sem_nome') setFilterTab('sem_nome');
+            else if (view === 'tabela') setFilterTab('todas');
+          }}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          pendingCount={pendingCount}
+          unidentifiedCount={unidentifiedCount}
+        />
+      )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         
         {/* Enterprise Top Header */}
         <Header
@@ -98,6 +154,9 @@ function App() {
           onSync={handleSync}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          onOpenLoginModal={() => setIsLoginModalOpen(true)}
         />
 
         {/* Global Toast Feedback Notification Banner */}
@@ -126,35 +185,57 @@ function App() {
         {/* Page Content Body */}
         <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
           
-          {activeView === 'dashboard' && (
-            <DashboardView
-              redacoes={redacoes}
-              onSelectRedacao={(r) => setSelectedRedacao(r)}
-              onNavigateToUpload={() => setActiveView('novo')}
-            />
-          )}
+          {!isAuthenticated ? (
+            <ProjetoAgoraLandingView onOpenLoginModal={() => setIsLoginModalOpen(true)} />
+          ) : (
+            <>
+              {activeView === 'dashboard' && (
+                <DashboardView
+                  redacoes={redacoes}
+                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onNavigateToUpload={() => setActiveView('novo')}
+                />
+              )}
 
-          {activeView === 'novo' && (
-            <UploaderView onRedacaoSaved={handleRedacaoSaved} />
-          )}
+              {activeView === 'novo' && (
+                <UploaderView onRedacaoSaved={handleRedacaoSaved} />
+              )}
 
-          {(activeView === 'tabela' || activeView === 'sem_nome') && (
-            <RedacoesTableView
-              redacoes={redacoes}
-              filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
-              setFilterTab={setFilterTab}
-              onSelectRedacao={(r) => setSelectedRedacao(r)}
-              onDeleteRedacao={handleDeleteRedacao}
-              searchQuery={searchQuery}
-            />
-          )}
+              {(activeView === 'tabela' || activeView === 'sem_nome') && (
+                <RedacoesTableView
+                  redacoes={redacoes}
+                  filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
+                  setFilterTab={setFilterTab}
+                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onDeleteRedacao={handleDeleteRedacao}
+                  searchQuery={searchQuery}
+                />
+              )}
 
-          {activeView === 'config' && (
-            <ConfigView />
+              {activeView === 'config' && (
+                <ConfigView />
+              )}
+            </>
           )}
 
         </main>
       </div>
+
+      {/* Login Modal */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 bg-[#26251e]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md">
+            <button
+              onClick={() => setIsLoginModalOpen(false)}
+              className="absolute top-4 right-4 text-[#807d72] hover:text-[#26251e] p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] z-10 transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <LoginView onLoginSuccess={() => setIsLoginModalOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {selectedRedacao && (
@@ -169,6 +250,14 @@ function App() {
       )}
 
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

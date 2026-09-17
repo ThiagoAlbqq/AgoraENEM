@@ -1,12 +1,23 @@
 import React from 'react';
-import { Award, Compass, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
+import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToUpload }) {
+  const { user, isAdmin } = useAuth();
+
   const totalCount = redacoes.length;
   const correctedList = redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
   
   const avgScore = correctedList.length > 0
     ? Math.round(correctedList.reduce((acc, r) => acc + (r.nota_final || 0), 0) / correctedList.length)
+    : 0;
+
+  const maxScore = correctedList.length > 0
+    ? Math.max(...correctedList.map(r => r.nota_final || 0))
+    : 0;
+
+  const latestScore = correctedList.length > 0
+    ? (correctedList[0]?.nota_final || 0)
     : 0;
 
   const identifiedCount = redacoes.filter(r => r.is_synced && r.nome_detectado && r.nome_aluno).length;
@@ -23,95 +34,166 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
   };
 
   const compStats = [
-    { label: 'C1 - Norma Culta', avg: calcCompAvg('competencia_1'), color: '#dfa88f' }, // Peach
-    { label: 'C2 - Tema & Repertório', avg: calcCompAvg('competencia_2'), color: '#9fc9a2' }, // Mint
-    { label: 'C3 - Argumentação', avg: calcCompAvg('competencia_3'), color: '#9fbbe0' }, // Pastel Blue
-    { label: 'C4 - Coesão', avg: calcCompAvg('competencia_4'), color: '#c0a8dd' }, // Lavender
-    { label: 'C5 - Intervenção', avg: calcCompAvg('competencia_5'), color: '#c08532' } // Warm Gold
+    { code: 'C1', label: 'Norma Culta', avg: calcCompAvg('competencia_1'), color: '#dfa88f' },
+    { code: 'C2', label: 'Tema & Repertório', avg: calcCompAvg('competencia_2'), color: '#9fc9a2' },
+    { code: 'C3', label: 'Argumentação', avg: calcCompAvg('competencia_3'), color: '#9fbbe0' },
+    { code: 'C4', label: 'Coesão', avg: calcCompAvg('competencia_4'), color: '#c0a8dd' },
+    { code: 'C5', label: 'Intervenção', avg: calcCompAvg('competencia_5'), color: '#c08532' }
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       
-      {/* Hero Band / Editorial Welcome */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-8 shadow-none relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#e6e5e0] text-[#26251e] mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-[#f54e00]" />
-              Multi-Agente IA (Vision OCR + Evaluator)
+      {/* Hero Welcome Banner */}
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#dfa88f] bg-[#dfa88f]/20 text-[#f54e00]">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isAdmin ? 'Painel do Professor' : 'Portal do Aluno'}</span>
             </div>
-            <h2 className="text-3xl font-normal text-[#26251e] tracking-tight">
-              Painel Geral de Desempenho
+            <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight">
+              {isAdmin ? 'Painel Geral de Desempenho' : `Olá, ${user?.nome || 'Estudante'}!`}
             </h2>
-            <p className="text-sm text-[#5a5852] mt-1 max-w-xl leading-relaxed">
-              Análise textual cruzada baseada na Matriz do ENEM (0-1000) e Rubricas Qualitativas Sisedu (Projeto Ágora Escolar).
+            <p className="text-xs text-[#807d72] max-w-xl leading-relaxed">
+              {isAdmin
+                ? 'Análise textual cruzada baseada na Matriz do ENEM (0-1000) e Rubricas Qualitativas Sisedu.'
+                : 'Acompanhe o desempenho detalhado e a nota das suas redações validadas.'}
             </p>
           </div>
 
-          <button
-            onClick={onNavigateToUpload}
-            className="px-5 py-3 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs uppercase tracking-wider rounded-md transition-all shrink-0 cursor-pointer"
-          >
-            + Nova Correção em Lote
-          </button>
+          {isAdmin && (
+            <button
+              onClick={onNavigateToUpload}
+              className="w-full sm:w-auto px-4 py-2.5 border border-[#dfa88f] bg-[#dfa88f]/20 hover:bg-[#dfa88f]/40 text-[#f54e00] font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Nova Correção em Lote</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main KPI Stat Cards (White cards, hairline borders, timeline pastels) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
-          <div className="flex items-center justify-between text-[#807d72] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Total de Redações</span>
-            <FileText className="w-4 h-4 text-[#807d72]" />
-          </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{totalCount}</div>
-          <div className="text-xs text-[#807d72] mt-1 font-mono">{correctedList.length} corrigidas com sucesso</div>
-        </div>
-
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
-          <div className="flex items-center justify-between text-[#807d72] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Média Geral ENEM</span>
-            <Award className="w-4 h-4 text-[#f54e00]" />
-          </div>
-          <div className="text-3xl font-normal font-mono text-[#f54e00]">{avgScore > 0 ? avgScore : '—'}</div>
-          <div className="text-xs text-[#807d72] mt-1 font-mono">escala 0 a 1000 pontos</div>
-        </div>
-
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
-          <div className="flex items-center justify-between text-[#807d72] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Alunos Identificados</span>
-            <UserCheck className="w-4 h-4 text-[#1f8a65]" />
-          </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{identifiedCount}</div>
-          <div className="text-xs text-[#807d72] mt-1 font-mono">vinculados a nome e turma</div>
-        </div>
-
-        <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl">
-          <div className="flex items-center justify-between text-[#26251e] mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Sem Nome (Guardadas)</span>
-            <AlertTriangle className="w-4 h-4 text-[#c08532]" />
-          </div>
-          <div className="text-3xl font-normal font-mono text-[#26251e]">{unidentifiedCount}</div>
-          <div className="text-xs text-[#807d72] mt-1 font-mono">necessitam atribuição de nome</div>
-        </div>
-      </div>
-
-      {/* ENEM Competencies Average Chart (Signature AI Pastel Timeline Palette) */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
-        <h3 className="text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
-          <Award className="w-4 h-4 text-[#f54e00]" />
-          Média Geral por Competência do ENEM (C1 a C5)
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {compStats.map((item, idx) => (
-            <div key={idx} className="bg-[#fafaf7] border border-[#e6e5e0] p-4 rounded-lg space-y-2">
-              <div className="text-xs font-semibold text-[#26251e] truncate">{item.label}</div>
-              <div className="text-xl font-normal font-mono text-[#26251e]">
-                {item.avg} <span className="text-xs text-[#807d72] font-mono">/ 200</span>
+      {/* Main KPI Stat Cards */}
+      {isAdmin ? (
+        /* Admin KPI Cards */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Total de Redações</span>
+              <div className="p-2 rounded-lg bg-[#fafaf7] border border-[#e6e5e0] text-[#5a5852]">
+                <FileText className="w-4 h-4" />
               </div>
-              <div className="w-full bg-[#e6e5e0] h-2 rounded-full overflow-hidden">
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{totalCount}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">{correctedList.length} corrigidas com sucesso</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Média Geral ENEM</span>
+              <div className="p-2 rounded-lg bg-[#dfa88f]/20 border border-[#dfa88f] text-[#f54e00]">
+                <Award className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#f54e00]">{avgScore > 0 ? avgScore : '—'}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">escala 0 a 1000 pontos</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Alunos Identificados</span>
+              <div className="p-2 rounded-lg bg-[#9fc9a2]/20 border border-[#9fc9a2] text-[#1f8a65]">
+                <UserCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{identifiedCount}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">vinculados a nome e turma</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Sem Nome (Guardadas)</span>
+              <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{unidentifiedCount}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">necessitam atribuição de nome</div>
+          </div>
+        </div>
+      ) : (
+        /* Student KPI Cards */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Redações Validadas</span>
+              <div className="p-2 rounded-lg bg-[#9fc9a2]/20 border border-[#9fc9a2] text-[#1f8a65]">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{correctedList.length}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">disponíveis para consulta</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Sua Média ENEM</span>
+              <div className="p-2 rounded-lg bg-[#dfa88f]/20 border border-[#dfa88f] text-[#f54e00]">
+                <Award className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#f54e00]">{avgScore > 0 ? avgScore : '—'}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">sua pontuação média</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Sua Maior Nota</span>
+              <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-600">
+                <Sparkles className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{maxScore > 0 ? maxScore : '—'}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">melhor resultado</div>
+          </div>
+
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Última Nota</span>
+              <div className="p-2 rounded-lg bg-[#fafaf7] border border-[#e6e5e0] text-[#5a5852]">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{latestScore > 0 ? latestScore : '—'}</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">avaliação mais recente</div>
+          </div>
+        </div>
+      )}
+
+      {/* ENEM Competencies Average Chart */}
+      <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl space-y-4 shadow-xs">
+        <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
+          <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#f54e00]" />
+            {isAdmin ? 'Média por Competência do ENEM (C1 a C5)' : 'Seu Desempenho por Competência'}
+          </h3>
+          <span className="text-[11px] font-mono text-[#807d72]">Máx: 200 pts/comp</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {compStats.map((item, idx) => (
+            <div key={idx} className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold text-[#f54e00] px-1.5 py-0.5 rounded bg-[#dfa88f]/20 border border-[#dfa88f]/40">
+                  {item.code}
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#26251e]">
+                  {item.avg} <span className="text-[10px] text-[#807d72]">/ 200</span>
+                </span>
+              </div>
+              <div className="text-xs font-medium text-[#26251e] truncate">{item.label}</div>
+              <div className="w-full bg-[#e6e5e0] h-1.5 rounded-full overflow-hidden">
                 <div
                   className="h-full transition-all duration-500 rounded-full"
                   style={{ width: `${(item.avg / 200) * 100}%`, backgroundColor: item.color }}
@@ -122,142 +204,57 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
         </div>
       </div>
 
-      {/* Class Comparison Panel (Desempenho Comparativo por Turma) */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
-        <h3 className="text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
-          <Compass className="w-4 h-4 text-[#807d72]" />
-          Desempenho Comparativo por Turma Escolar
-        </h3>
-
-        {(() => {
-          const normalizeTurmaName = (rawName) => {
-            if (!rawName || typeof rawName !== 'string') return 'Sem Turma Definida';
-            let cleaned = rawName.trim();
-            if (!cleaned) return 'Sem Turma Definida';
-            
-            // Standardize degree symbol ° (U+00B0) and ordinal º (U+00BA)
-            cleaned = cleaned.replace(/[°º]/g, 'º');
-            
-            // Standardize spacing (e.g., "3º G" -> "3º G", "3ºG" -> "3º G")
-            cleaned = cleaned.replace(/(\d+)\s*º\s*([a-zA-Z])/gi, '$1º $2');
-            cleaned = cleaned.replace(/\s+/g, ' ').toUpperCase();
-            
-            return cleaned;
-          };
-
-          const turmaStatsMap = {};
-          correctedList.forEach((r) => {
-            const rawTurma = r.turma_aluno || r.extracted_data?.turma || 'Sem Turma Definida';
-            const normalizedTurma = normalizeTurmaName(rawTurma);
-
-            if (!turmaStatsMap[normalizedTurma]) {
-              turmaStatsMap[normalizedTurma] = { count: 0, totalScore: 0, displayName: normalizedTurma };
-            }
-            turmaStatsMap[normalizedTurma].count += 1;
-            turmaStatsMap[normalizedTurma].totalScore += (r.nota_final || 0);
-          });
-
-          const turmaStats = Object.keys(turmaStatsMap).map((key) => ({
-            turma: turmaStatsMap[key].displayName,
-            count: turmaStatsMap[key].count,
-            avgScore: Math.round(turmaStatsMap[key].totalScore / turmaStatsMap[key].count)
-          }));
-
-          if (turmaStats.length === 0) {
-            return (
-              <div className="p-4 text-center text-xs text-[#807d72] bg-[#fafaf7] rounded-lg border border-[#e6e5e0]">
-                Ainda não existem dados de turmas corrigidas para exibir o comparativo.
-              </div>
-            );
-          }
-
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {turmaStats.map((item, idx) => (
-                <div key={idx} className="bg-[#fafaf7] border border-[#e6e5e0] p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-xs text-[#26251e] truncate">{item.turma}</span>
-                    <span className="text-[10px] font-mono text-[#807d72] bg-[#e6e5e0] px-1.5 py-0.5 rounded">
-                      {item.count} aluno(s)
-                    </span>
-                  </div>
-                  <div className="text-2xl font-bold font-mono text-[#f54e00]">
-                    {item.avgScore} <span className="text-xs font-normal text-[#807d72]">pts</span>
-                  </div>
-                  <div className="w-full bg-[#e6e5e0] h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#f54e00] rounded-full transition-all duration-500"
-                      style={{ width: `${(item.avgScore / 1000) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* Recent Redações List */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-normal text-[#26251e] tracking-tight flex items-center gap-2">
-            <Compass className="w-4 h-4 text-[#807d72]" />
-            Redações Recentes
+      {/* Recent Redações Overview */}
+      <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl space-y-3.5 shadow-xs">
+        <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
+          <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#807d72]" />
+            {isAdmin ? 'Últimas Redações Registradas' : 'Suas Redações Avaliadas'}
           </h3>
+          <span className="text-[11px] font-mono text-[#807d72]">{correctedList.length} total</span>
         </div>
 
-        <div className="space-y-2">
-          {redacoes.slice(0, 5).map((item) => {
-            const isIdentified = item.nome_detectado && item.nome_aluno;
-            const ext = item.extracted_data || {};
-            const enemScore = ext.avaliacoes?.enem?.nota_total_enem ?? item.nota_final;
-
-            return (
+        {correctedList.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[#807d72] bg-[#fafaf7] rounded-lg border border-[#e6e5e0]">
+            {isAdmin
+              ? 'Nenhuma redação registrada no momento.'
+              : 'Você ainda não possui redações validadas pelo professor.'}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {correctedList.slice(0, 5).map((r) => (
               <div
-                key={item.id}
-                onClick={() => item.is_synced && onSelectRedacao(item)}
-                className="bg-[#fafaf7] border border-[#e6e5e0] hover:border-[#cfcdc4] p-3.5 rounded-lg flex items-center justify-between gap-4 cursor-pointer transition-colors"
+                key={r.id}
+                onClick={() => onSelectRedacao(r)}
+                className="py-2.5 px-3 flex items-center justify-between hover:bg-[#fafaf7] rounded-lg border border-transparent hover:border-[#e6e5e0] transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-md bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4 text-[#807d72]" />
+                  <div className="text-xs font-mono font-bold text-[#807d72] shrink-0">
+                    #{r.id}
                   </div>
-
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-[#26251e] truncate">
-                        {isIdentified ? item.nome_aluno : '⚠️ Nome Não Identificado (Guardada)'}
-                      </span>
-                      {item.turma_aluno && (
-                        <span className="text-[10px] font-mono text-[#5a5852] bg-[#e6e5e0] px-1.5 py-0.5 rounded">
-                          {item.turma_aluno}
-                        </span>
-                      )}
+                    <div className="text-xs font-semibold text-[#26251e] truncate group-hover:text-[#f54e00] transition-colors">
+                      {r.nome_aluno || 'Estudante'}
                     </div>
-                    <p className="text-xs text-[#807d72] truncate max-w-[300px]">
-                      {ext.texto_transcrito ? ext.texto_transcrito.substring(0, 60) + '...' : 'Aguardando avaliação...'}
-                    </p>
+                    <div className="text-[10px] font-mono text-[#807d72] truncate">
+                      {r.turma_aluno || 'Geral'} • {new Date(r.data_captura).toLocaleDateString('pt-BR')}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {item.is_synced && enemScore !== null && enemScore !== undefined ? (
-                    <span className="px-3 py-1 rounded-full bg-[#e6e5e0] text-[#26251e] font-mono font-bold text-xs">
-                      {enemScore} pts
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-[#dfa88f] text-[#26251e] text-[10px] font-mono font-medium">
-                      PENDENTE
-                    </span>
-                  )}
-                  <ChevronRight className="w-4 h-4 text-[#807d72]" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[#dfa88f]/20 border border-[#dfa88f] text-[#f54e00]">
+                    {r.nota_final} pts
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[#807d72] group-hover:text-[#26251e] transition-colors" />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>
   );
 }
+
