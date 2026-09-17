@@ -7,17 +7,44 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create data folder if not exists
-const dataDir = path.join(__dirname, '../../data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+let dbPath;
+
+try {
+  if (process.env.VERCEL) {
+    dbPath = '/tmp/agora.db';
+  } else {
+    const dataDir = path.join(__dirname, '../../data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    dbPath = path.join(dataDir, 'agora.db');
+  }
+} catch (err) {
+  console.warn('[SQLite DB] Fallback para /tmp/agora.db devido a sistema de arquivos de apenas leitura:', err.message);
+  dbPath = '/tmp/agora.db';
 }
 
-const dbPath = path.join(dataDir, 'agora.db');
-const db = new Database(dbPath);
+let db;
+try {
+  db = new Database(dbPath);
+} catch (err) {
+  console.error('[SQLite DB] Erro ao abrir banco SQLite em:', dbPath, err.message);
+  try {
+    db = new Database('/tmp/agora.db');
+  } catch (fallbackErr) {
+    console.error('[SQLite DB] Usando banco de dados em memória (:memory:):', fallbackErr.message);
+    db = new Database(':memory:');
+  }
+}
 
-// Enable WAL mode for high concurrency
-db.pragma('journal_mode = WAL');
+// Enable WAL mode when not on Vercel
+try {
+  if (!process.env.VERCEL) {
+    db.pragma('journal_mode = WAL');
+  }
+} catch (e) {
+  console.log('[SQLite DB] PRAGMA journal_mode ignorado.');
+}
 
 // Initialize Database Schemas
 db.exec(`
@@ -71,18 +98,23 @@ const ADMIN_EMAIL = 'clara.gabriellee16@gmail.com';
 const ADMIN_PASS = 'Clara@Enem2026';
 const adminPasswordHash = bcrypt.hashSync(ADMIN_PASS, 10);
 
-const existingAdmin = db.prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)").get(ADMIN_EMAIL);
-if (!existingAdmin) {
-  db.prepare(`
-    INSERT INTO users (nome, email, senha_hash, role, turma)
-    VALUES (?, ?, ?, ?, ?)
-  `).run('Profa. Clara Silveira', ADMIN_EMAIL, adminPasswordHash, 'ADMIN', 'Coordenação Pedagógica');
-  console.log(`[SQLite DB] Admin padrão criado: ${ADMIN_EMAIL} / ${ADMIN_PASS}`);
-} else {
-  db.prepare(`
-    UPDATE users SET senha_hash = ?, role = 'ADMIN' WHERE LOWER(email) = LOWER(?)
-  `).run(adminPasswordHash, ADMIN_EMAIL);
-  console.log(`[SQLite DB] Admin padrão atualizado: ${ADMIN_EMAIL}`);
+try {
+  const existingAdmin = db.prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)").get(ADMIN_EMAIL);
+  if (!existingAdmin) {
+    db.prepare(`
+      INSERT INTO users (nome, email, senha_hash, role, turma)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('Profa. Clara Silveira', ADMIN_EMAIL, adminPasswordHash, 'ADMIN', 'Coordenação Pedagógica');
+    console.log(`[SQLite DB] Admin padrão criado: ${ADMIN_EMAIL} / ${ADMIN_PASS}`);
+  } else {
+    db.prepare(`
+      UPDATE users SET senha_hash = ?, role = 'ADMIN' WHERE LOWER(email) = LOWER(?)
+    `).run(adminPasswordHash, ADMIN_EMAIL);
+    console.log(`[SQLite DB] Admin padrão atualizado: ${ADMIN_EMAIL}`);
+  }
+} catch (err) {
+  console.error('[SQLite DB] Erro ao sincronizar usuário admin padrão:', err.message);
 }
 
 export default db;
+
