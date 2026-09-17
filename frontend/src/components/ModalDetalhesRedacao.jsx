@@ -1,15 +1,66 @@
 import React, { useState } from 'react';
-import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2 } from 'lucide-react';
+import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2, Search, GraduationCap, Link, Unlink } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { updateNomeAluno } from '../db/db';
+import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/authService';
 
 export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
+  const { isAdmin } = useAuth();
   const [manualName, setManualName] = useState(redacao?.nome_aluno || '');
   const [manualTurma, setManualTurma] = useState(redacao?.turma_aluno || '');
   const [isSavingName, setIsSavingName] = useState(false);
   const [activeTab, setActiveTab] = useState('enem'); // 'enem' | 'sisedu' | 'texto'
   const [copiedText, setCopiedText] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [statusValidacao, setStatusValidacao] = useState(redacao?.status_validacao || 'VALIDADA');
+
+  const [estudantesList, setEstudantesList] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState(redacao?.user_id || '');
+  const [isLinkingStudent, setIsLinkingStudent] = useState(false);
+  const [isStudentPickerOpen, setIsStudentPickerOpen] = useState(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    if (isAdmin) {
+      authService.getEstudantes().then(list => setEstudantesList(list)).catch(() => {});
+    }
+  }, [isAdmin]);
+
+  const handleValidarRedacao = async () => {
+    setIsValidating(true);
+    try {
+      await authService.validarRedacao(redacao.id);
+      setStatusValidacao('VALIDADA');
+      if (onUpdated) onUpdated();
+    } catch (err) {
+      alert(err.message || 'Erro ao validar redação.');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleVincularAluno = async (studentId) => {
+    setIsLinkingStudent(true);
+    try {
+      const selectedEstudante = estudantesList.find(s => String(s.id) === String(studentId));
+      await authService.vincularAluno(redacao.id, {
+        user_id: studentId ? Number(studentId) : null,
+        nome_aluno: selectedEstudante ? selectedEstudante.nome : manualName
+      });
+      setSelectedStudentId(studentId);
+      if (selectedEstudante) {
+        setManualName(selectedEstudante.nome);
+        if (selectedEstudante.turma) setManualTurma(selectedEstudante.turma);
+      }
+      if (onUpdated) onUpdated();
+    } catch (err) {
+      alert(err.message || 'Erro ao vincular aluno.');
+    } finally {
+      setIsLinkingStudent(false);
+    }
+  };
 
   if (!redacao) return null;
 
@@ -273,230 +324,161 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
   return (
     <>
-      {/* SCREEN MODAL VIEW */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn no-print">
-        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-5xl max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
+      {/* FIXED-SIZE CLEAN MODAL VIEW */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn no-print">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-4xl h-[650px] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
 
-          {/* Modal Header */}
-          <div className="p-4 sm:p-5 border-b border-[#e6e5e0] bg-[#fafaf7] flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
-                {isIdentified ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#e6e5e0] text-[#26251e]">
-                    <UserCheck className="w-3.5 h-3.5 text-[#1f8a65]" />
-                    {data.aluno || redacao.nome_aluno}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#dfa88f] text-[#26251e]">
-                    <UserX className="w-3.5 h-3.5" />
-                    Sem Nome (Guardada em Pendentes)
-                  </span>
-                )}
-
-                {(data.turma || redacao.turma_aluno) && (
-                  <span className="text-xs font-mono text-[#5a5852] bg-[#e6e5e0] px-2.5 py-0.5 rounded-full">
-                    {data.turma || redacao.turma_aluno}
-                  </span>
-                )}
-
-                <span className="text-xs font-mono text-[#807d72] bg-[#ffffff] px-2 py-0.5 rounded border border-[#e6e5e0]">
-                  ID #{String(redacao.id).padStart(4, '0')}
-                </span>
+          {/* Header Bar */}
+          <div className="bg-[#fafaf7] border-b border-[#e6e5e0] px-5 py-3.5 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#f54e00]">
+                <GraduationCap className="w-4 h-4" />
               </div>
 
-              <h3 className="text-base sm:text-xl font-normal text-[#26251e] tracking-tight mt-1">
-                Relatório de Avaliação Cruzada (ENEM x Sisedu Projeto Ágora)
-              </h3>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-[#26251e] tracking-tight truncate">
+                    {data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}
+                  </h3>
+
+                  {isIdentified ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium bg-[#9fc9a2]/30 text-[#1f8a65]">
+                      <UserCheck className="w-3 h-3" />
+                      Identificado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium bg-[#dfa88f]/30 text-[#f54e00]">
+                      <UserX className="w-3 h-3" />
+                      Sem Nome
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-mono text-[#807d72] mt-0.5">
+                  <span>ID #{String(redacao.id).padStart(4, '0')}</span>
+                  <span>•</span>
+                  <span>{data.turma || redacao.turma_aluno || 'Geral'}</span>
+                  <span>•</span>
+                  <span>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto">
+            {/* Score & Close */}
+            <div className="flex items-center gap-3 shrink-0">
               {enem.nota_total_enem !== undefined && (
-                <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-[#e6e5e0] bg-[#ffffff] text-center font-mono">
-                  <div className="text-[9px] sm:text-[10px] uppercase font-semibold text-[#807d72]">Nota ENEM</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[#f54e00]">{enem.nota_total_enem} <span className="text-xs font-normal text-[#807d72]">/ 1000</span></div>
+                <div className="px-3 py-1 rounded-md border border-[#dfa88f] bg-[#dfa88f]/20 font-mono text-xs flex items-baseline gap-1">
+                  <span className="text-[10px] font-bold text-[#807d72]">NOTA ENEM:</span>
+                  <span className="text-base font-bold text-[#f54e00]">{enem.nota_total_enem}</span>
+                  <span className="text-[10px] text-[#807d72]">/1000</span>
                 </div>
               )}
 
               <button
                 type="button"
-                disabled={isGeneratingPDF}
-                onClick={handleDownloadPDF}
-                className="px-3 sm:px-4 py-2 rounded-md bg-[#26251e] hover:bg-[#000000] text-white text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer disabled:opacity-50"
-                title="Baixar Boletim em formato PDF"
-              >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="hidden sm:inline">Gerando PDF...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 text-[#f54e00]" />
-                    <span className="hidden sm:inline">Baixar PDF</span>
-                    <span className="sm:hidden">PDF</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
                 onClick={onClose}
-                className="p-2 rounded-md bg-[#fafaf7] hover:bg-[#e6e5e0] text-[#807d72] hover:text-[#26251e] transition-colors cursor-pointer"
+                className="p-1.5 rounded-md hover:bg-[#e6e5e0] text-[#807d72] hover:text-[#26251e] transition-colors cursor-pointer"
+                title="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Unidentified Name Banner */}
-          {!isIdentified && (
-            <div className="bg-[#fafaf7] border-b border-[#e6e5e0] p-4 px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[#26251e] text-xs">
-                <UserX className="w-4 h-4 text-[#c08532] shrink-0" />
-                <span>
-                  <strong>Aluno/Turma não identificados automaticamente:</strong> Atribua os dados para vincular ao repositório:
-                </span>
-              </div>
-              <form onSubmit={handleSaveName} className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Nome do aluno..."
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-48"
-                />
-                <input
-                  type="text"
-                  placeholder="Turma (ex: 3º Ano A)..."
-                  value={manualTurma}
-                  onChange={(e) => setManualTurma(e.target.value)}
-                  className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-36"
-                />
-                <button
-                  type="submit"
-                  disabled={isSavingName || !manualName.trim()}
-                  className="px-3 py-1.5 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs rounded-md transition-colors flex items-center gap-1 shrink-0 disabled:opacity-50 cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  Salvar
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Navigation Tabs */}
-          <div className="px-6 border-b border-[#e6e5e0] bg-[#fafaf7] flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 pt-2">
+          {/* Navigation Tabs (3 Clean Tabs) */}
+          <div className="px-5 bg-[#fafaf7] border-b border-[#e6e5e0] flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setActiveTab('enem')}
-              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'enem'
-                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
-                }`}
+              className={`px-4 py-2.5 text-xs font-medium border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'enem'
+                  ? 'border-[#f54e00] text-[#f54e00] font-semibold bg-[#ffffff] rounded-t-md'
+                  : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              }`}
             >
-              <Award className="w-4 h-4" />
-              <span>Matriz ENEM (C1 a C5)</span>
+              <Award className="w-3.5 h-3.5" />
+              <span>Matriz ENEM</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('sisedu')}
-              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'sisedu'
-                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
-                }`}
+              className={`px-4 py-2.5 text-xs font-medium border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'sisedu'
+                  ? 'border-[#f54e00] text-[#f54e00] font-semibold bg-[#ffffff] rounded-t-md'
+                  : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              }`}
             >
-              <Compass className="w-4 h-4" />
-              <span>Sisedu (Projeto Ágora Escolar)</span>
+              <Compass className="w-3.5 h-3.5" />
+              <span>Rubricas Sisedu</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('texto')}
-              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'texto'
-                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
-                }`}
+              className={`px-4 py-2.5 text-xs font-medium border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'texto'
+                  ? 'border-[#f54e00] text-[#f54e00] font-semibold bg-[#ffffff] rounded-t-md'
+                  : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              }`}
             >
-              <BookOpen className="w-4 h-4" />
-              <span>Texto Integral Transcrito</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('preview')}
-              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'preview'
-                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
-                }`}
-              title="Pré-visualizar e testar o layout da Folha PDF"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Prévia do PDF</span>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Texto & Imagem</span>
             </button>
           </div>
 
-          {/* Modal Body */}
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
-
-            {/* TAB PREVIEW: VISUAL TEST OF THE PDF SHEET */}
-            {activeTab === 'preview' && (
-              <div className="flex flex-col items-center gap-3">
-                <div className="text-xs text-[#807d72] bg-[#fafaf7] border border-[#e6e5e0] p-2.5 rounded-lg w-full max-w-[740px] text-center font-mono">
-                  💡 <strong>Modo Prévia de Teste:</strong> Qualquer alteração no código do template reflete aqui ao vivo via Hot Reload.
-                </div>
-                <div className="shadow-lg border border-[#d0d0d0] rounded-lg overflow-hidden bg-white">
-                  {renderMinimalistOfficialSheet()}
-                </div>
-              </div>
-            )}
+          {/* Scrollable Modal Content (Fixed Height Body) */}
+          <div className="flex-1 p-5 overflow-y-auto custom-scrollbar bg-[#ffffff] space-y-4">
 
             {/* TAB 1: ENEM MATRIX */}
             {activeTab === 'enem' && (
-              <div className="space-y-4">
-                <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#f54e00]" />
-                  Avaliação Oficial ENEM (0 a 200 pontos por Competência)
-                </h4>
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
+                  <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#f54e00]" />
+                    Avaliação Oficial ENEM (0 a 200 pontos por Competência)
+                  </h4>
+                  <span className="text-[11px] font-mono text-[#807d72]">5 Competências</span>
+                </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-3">
                   {enemCompetenciasMap.map(({ key, title, desc, color }) => {
                     const comp = enem[key] || { nota: 0, citacao_texto: 'Elemento ausente no texto', justificativa: 'Não avaliado' };
                     const percent = Math.min(100, Math.max(0, (comp.nota / 200) * 100));
 
                     return (
-                      <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
+                      <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="font-semibold text-sm text-[#26251e]">{title}</div>
+                            <div className="font-semibold text-xs sm:text-sm text-[#26251e]">{title}</div>
                             <div className="text-[11px] text-[#807d72]">{desc}</div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <span className="font-mono font-bold text-xl text-[#26251e]">{comp.nota}</span>
-                            <span className="text-xs text-[#807d72] font-mono"> / 200</span>
+                          <div className="text-right shrink-0 bg-[#ffffff] px-2.5 py-1 rounded-md border border-[#e6e5e0] font-mono">
+                            <span className="font-bold text-sm text-[#26251e]">{comp.nota}</span>
+                            <span className="text-[10px] text-[#807d72]"> / 200</span>
                           </div>
                         </div>
 
-                        <div className="w-full bg-[#e6e5e0] h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#e6e5e0] h-1.5 rounded-full overflow-hidden">
                           <div
                             className="h-full transition-all duration-500 rounded-full"
                             style={{ width: `${percent}%`, backgroundColor: color }}
                           />
                         </div>
 
+                        <p className="text-xs text-[#5a5852] leading-relaxed">
+                          <strong className="text-[#26251e]">Parecer:</strong> {comp.justificativa}
+                        </p>
+
                         {comp.citacao_texto && (
-                          <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-3 rounded-r-md text-xs text-[#26251e] flex items-start gap-2 font-mono">
-                            <Quote className="w-3.5 h-3.5 text-[#807d72] shrink-0 mt-0.5" />
-                            <div>
-                              <span className="text-[10px] uppercase font-bold text-[#807d72] block mb-0.5 font-sans">Citação Direta Obrigatória do Texto:</span>
+                          <div className="bg-[#ffffff] border-l-2 border-[#f54e00] p-2.5 rounded-r-md text-xs text-[#26251e] flex items-start gap-2 font-mono">
+                            <Quote className="w-3.5 h-3.5 text-[#f54e00] shrink-0 mt-0.5" />
+                            <div className="text-[11px]">
+                              <span className="text-[9px] uppercase font-bold text-[#807d72] block font-sans">Trecho Citado:</span>
                               <span className="italic">"{comp.citacao_texto}"</span>
                             </div>
                           </div>
                         )}
-
-                        <p className="text-xs text-[#5a5852] leading-relaxed bg-[#ffffff] p-3 rounded-md border border-[#e6e5e0]">
-                          <strong className="text-[#26251e]">Justificativa:</strong> {comp.justificativa}
-                        </p>
                       </div>
                     );
                   })}
@@ -504,21 +486,23 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               </div>
             )}
 
-            {/* TAB 2: SISEDU (PROJETO ÁGORA) MATRIX */}
+            {/* TAB 2: SISEDU MATRIX */}
             {activeTab === 'sisedu' && (
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
-                    <Compass className="w-4 h-4 text-[#807d72]" />
-                    Sisedu (Projeto Ágora) — Dimensão Discursiva
-                  </h4>
+              <div className="space-y-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-[#e6e5e0]">
+                    <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-[#807d72]" />
+                      Dimensão Discursiva (Sisedu)
+                    </h4>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {siseduDiscursivaMap.map(({ key, title, desc }) => {
+                    {siseduDiscursivaMap.map(({ key, title }) => {
                       const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', citacao_texto: 'Ausente', justificativa: 'Não avaliado' };
 
                       return (
-                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 flex flex-col justify-between space-y-3">
+                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <h5 className="font-semibold text-xs text-[#26251e]">{title}</h5>
@@ -526,18 +510,16 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                                 {item.nivel}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[#807d72] mb-3">{desc}</p>
+
+                            <p className="text-xs text-[#5a5852] leading-relaxed my-1.5">
+                              {item.justificativa}
+                            </p>
 
                             {item.citacao_texto && (
-                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2.5 text-[11px] text-[#26251e] mb-2 rounded-r-md font-mono">
-                                <span className="text-[9px] uppercase font-bold text-[#807d72] block mb-0.5 font-sans">Trecho Citado:</span>
+                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2 text-[10px] text-[#26251e] rounded-r-md font-mono mt-2">
                                 <span className="italic">"{item.citacao_texto}"</span>
                               </div>
                             )}
-
-                            <p className="text-[11px] text-[#5a5852] leading-relaxed bg-[#ffffff] p-2.5 rounded-md border border-[#e6e5e0]">
-                              {item.justificativa}
-                            </p>
                           </div>
                         </div>
                       );
@@ -545,18 +527,20 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-[#e6e5e0]">
-                  <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#807d72]" />
-                    Sisedu (Projeto Ágora) — Dimensão Ético-Moral
-                  </h4>
+                <div className="space-y-2.5 pt-3 border-t border-[#e6e5e0]">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-[#e6e5e0]">
+                    <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#807d72]" />
+                      Dimensão Ético-Moral (Sisedu)
+                    </h4>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {siseduEticoMoralMap.map(({ key, title, desc }) => {
+                    {siseduEticoMoralMap.map(({ key, title }) => {
                       const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', citacao_texto: 'Ausente', justificativa: 'Não avaliado' };
 
                       return (
-                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 flex flex-col justify-between space-y-3">
+                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <h5 className="font-semibold text-xs text-[#26251e]">{title}</h5>
@@ -564,18 +548,16 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                                 {item.nivel}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[#807d72] mb-3">{desc}</p>
+
+                            <p className="text-xs text-[#5a5852] leading-relaxed my-1.5">
+                              {item.justificativa}
+                            </p>
 
                             {item.citacao_texto && (
-                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2.5 text-[11px] text-[#26251e] mb-2 rounded-r-md font-mono">
-                                <span className="text-[9px] uppercase font-bold text-[#807d72] block mb-0.5 font-sans">Trecho Citado:</span>
+                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2 text-[10px] text-[#26251e] rounded-r-md font-mono mt-2">
                                 <span className="italic">"{item.citacao_texto}"</span>
                               </div>
                             )}
-
-                            <p className="text-[11px] text-[#5a5852] leading-relaxed bg-[#ffffff] p-2.5 rounded-md border border-[#e6e5e0]">
-                              {item.justificativa}
-                            </p>
                           </div>
                         </div>
                       );
@@ -588,13 +570,13 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {/* TAB 3: TRANSCRIPTION & IMAGE */}
             {activeTab === 'texto' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 space-y-2">
+                <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#807d72] uppercase tracking-wider">
                     <ImageIcon className="w-4 h-4 text-[#26251e]" />
                     Imagem Original Enviada
                   </div>
                   {redacao.imagem_base64 ? (
-                    <div className="rounded-md overflow-hidden border border-[#e6e5e0] bg-[#ffffff] flex items-center justify-center max-h-[500px]">
+                    <div className="rounded-md overflow-hidden border border-[#e6e5e0] bg-[#ffffff] flex items-center justify-center max-h-[380px]">
                       <img
                         src={redacao.imagem_base64}
                         alt="Folha da Redação"
@@ -608,11 +590,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   )}
                 </div>
 
-                <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 space-y-2 flex flex-col">
+                <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-semibold text-[#807d72] uppercase tracking-wider">
                       <BookOpen className="w-4 h-4 text-[#26251e]" />
-                      Texto Integral Transcrito (JetBrains Mono)
+                      Texto Integral Transcrito
                     </div>
 
                     <button
@@ -623,18 +605,18 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                       {copiedText ? (
                         <>
                           <Check className="w-3.5 h-3.5 text-[#1f8a65]" />
-                          Copiado!
+                          <span>Copiado!</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5 text-[#807d72]" />
-                          Copiar Texto
+                          <span>Copiar</span>
                         </>
                       )}
                     </button>
                   </div>
 
-                  <div className="p-4 rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] text-xs font-mono leading-relaxed whitespace-pre-wrap min-h-[250px] max-h-[500px] overflow-y-auto custom-scrollbar select-text">
+                  <div className="p-3.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] text-xs font-mono leading-relaxed whitespace-pre-wrap flex-1 max-h-[380px] overflow-y-auto custom-scrollbar select-text">
                     {fullTextContent}
                   </div>
                 </div>
@@ -643,34 +625,88 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
           </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-[#e6e5e0] bg-[#fafaf7] flex justify-between items-center">
-            <button
-              type="button"
-              disabled={isGeneratingPDF}
-              onClick={handleDownloadPDF}
-              className="px-4 py-2 bg-[#26251e] hover:bg-[#000000] text-white font-medium text-xs rounded-md transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isGeneratingPDF ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Gerando Arquivo PDF...</span>
-                </>
+          {/* Clean Footer Bar */}
+          <div className="p-3.5 px-5 border-t border-[#e6e5e0] bg-[#fafaf7] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            {/* Quick Actions (Admin) */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {!isIdentified ? (
+                <form onSubmit={handleSaveName} className="flex items-center gap-1.5 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Nome do Aluno..."
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    className="bg-[#ffffff] border border-[#e6e5e0] rounded px-2 py-1 text-xs text-[#26251e] w-36"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Turma..."
+                    value={manualTurma}
+                    onChange={(e) => setManualTurma(e.target.value)}
+                    className="bg-[#ffffff] border border-[#e6e5e0] rounded px-2 py-1 text-xs text-[#26251e] w-24"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSavingName || !manualName.trim()}
+                    className="px-2.5 py-1 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs rounded transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    Salvar
+                  </button>
+                </form>
               ) : (
-                <>
-                  <Download className="w-4 h-4 text-[#f54e00]" />
-                  <span>Baixar Boletim em PDF (.pdf)</span>
-                </>
-              )}
-            </button>
+                isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsStudentPickerOpen(true)}
+                      className="text-xs font-mono text-[#f54e00] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>{selectedStudentId ? 'Aluno Vinculado (Alterar)' : 'Vincular a Aluno'}</span>
+                    </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2 bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md transition-colors cursor-pointer"
-            >
-              Fechar Relatório
-            </button>
+                    {statusValidacao !== 'VALIDADA' && (
+                      <button
+                        type="button"
+                        onClick={handleValidarRedacao}
+                        disabled={isValidating}
+                        className="px-3 py-1 bg-[#1f8a65] hover:bg-[#176d50] text-white font-medium text-xs rounded-md flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>{isValidating ? 'Validando...' : 'Validar & Liberar'}</span>
+                      </button>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Standard Footer Actions */}
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                disabled={isGeneratingPDF}
+                onClick={handleDownloadPDF}
+                className="px-3.5 py-1.5 bg-[#26251e] hover:bg-[#000000] text-white font-medium text-xs rounded-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isGeneratingPDF ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 text-[#f54e00]" />
+                    <span>Baixar PDF</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3.5 py-1.5 bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
 
         </div>
@@ -680,6 +716,140 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       <div className="fixed top-0 -left-[9999px] pointer-events-none z-[-100]">
         {renderMinimalistOfficialSheet()}
       </div>
+
+      {/* STUDENT PICKER MODAL FOR PROFESSORS */}
+      {isStudentPickerOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#26251e]/40 backdrop-blur-xs animate-fadeIn no-print">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-lg p-5 shadow-2xl space-y-4 text-[#26251e]">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-3">
+              <div>
+                <h4 className="text-base font-normal tracking-tight text-[#26251e] flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-[#f54e00]" />
+                  Vincular Redação a Aluno Cadastrado
+                </h4>
+                <p className="text-xs text-[#807d72] mt-0.5">
+                  Selecione o aluno que receberá esta avaliação em seu portal individual.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsStudentPickerOpen(false)}
+                className="p-1 rounded-md text-[#807d72] hover:text-[#26251e] bg-[#fafaf7] border border-[#e6e5e0] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Pesquisar por nome, e-mail ou turma..."
+                value={studentSearchQuery}
+                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+              />
+            </div>
+
+            {/* Options List */}
+            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+              {/* Unlink Option */}
+              <div
+                onClick={() => { handleVincularAluno(''); setIsStudentPickerOpen(false); }}
+                className={`p-3 rounded-lg border border-[#e6e5e0] transition-all cursor-pointer flex items-center justify-between ${
+                  !selectedStudentId ? 'bg-[#f7f7f4] border-[#cfcdc4]' : 'bg-[#ffffff] hover:bg-[#fafaf7]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Unlink className="w-4 h-4 text-[#807d72]" />
+                  <div>
+                    <span className="text-xs font-medium text-[#26251e] block">Não Vincular a Conta</span>
+                    <span className="text-[10px] font-mono text-[#807d72]">Manter com nome manual e sem envio para portal de aluno</span>
+                  </div>
+                </div>
+                {!selectedStudentId && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#e6e5e0] text-[#26251e]">
+                    SELECIONADO
+                  </span>
+                )}
+              </div>
+
+              {/* Filtered Student Cards */}
+              {(() => {
+                const filteredEstudantes = estudantesList.filter(est => {
+                  const query = studentSearchQuery.toLowerCase().trim();
+                  if (!query) return true;
+                  return (
+                    (est.nome || '').toLowerCase().includes(query) ||
+                    (est.email || '').toLowerCase().includes(query) ||
+                    (est.turma || '').toLowerCase().includes(query)
+                  );
+                });
+
+                if (filteredEstudantes.length === 0) {
+                  return (
+                    <div className="p-4 text-center text-xs text-[#807d72] font-mono bg-[#fafaf7] rounded-md border border-[#e6e5e0]">
+                      Nenhum estudante cadastrado encontrado.
+                    </div>
+                  );
+                }
+
+                return filteredEstudantes.map((est) => {
+                  const isSelected = String(selectedStudentId) === String(est.id);
+                  return (
+                    <div
+                      key={est.id}
+                      onClick={() => { handleVincularAluno(est.id); setIsStudentPickerOpen(false); }}
+                      className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-[#9fc9a2]/20 border-[#9fc9a2]'
+                          : 'bg-[#ffffff] border-[#e6e5e0] hover:bg-[#fafaf7]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#e6e5e0] flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-4 h-4 text-[#26251e]" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-[#26251e]">{est.nome}</div>
+                          <div className="text-[10px] font-mono text-[#807d72]">{est.email} • {est.turma || 'Sem Turma'}</div>
+                        </div>
+                      </div>
+
+                      {isSelected ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-[#9fc9a2] text-[#26251e]">
+                          ✓ VINCULADO
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="px-2.5 py-1 bg-[#f54e00] hover:bg-[#d04200] text-white text-[10px] font-medium uppercase tracking-wider rounded-md transition-colors cursor-pointer"
+                        >
+                          Vincular
+                        </button>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-2 border-t border-[#e6e5e0] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsStudentPickerOpen(false)}
+                className="px-4 py-1.5 bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md hover:bg-[#fafaf7] cursor-pointer"
+              >
+                Concluído
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </>
   );
 }

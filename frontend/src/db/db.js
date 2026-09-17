@@ -97,3 +97,17 @@ export async function deleteRedacao(id) {
     throw error;
   }
 }
+
+/**
+ * Helper to clear all local essays from IndexedDB.
+ */
+export async function clearAllLocalRedacoes() {
+  try {
+    await db.redacoes.clear();
+    console.log('[IndexedDB] Todas as redações locais foram apagadas.');
+  } catch (error) {
+    console.error('[IndexedDB] Erro ao apagar redações locais:', error);
+    throw error;
+  }
+}
+

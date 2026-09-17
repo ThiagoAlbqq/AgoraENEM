@@ -22,3 +22,5 @@ build/
 .vscode/
 .idea/
 *.log
+backend/data/
+

@@ -56,7 +56,7 @@ export default function ConfigView() {
             </span>
           </div>
           <p className="text-[#6b6960] text-[11px] leading-relaxed">
-            Otimizado para economia de requisições (15 RPM). Realiza a leitura visual da imagem, a transcrição 100% integral do texto e o cálculo das 5 competências do ENEM com citações obrigatórias em uma **única passada multimodal**.
+            Otimizado para economia de requisições (15 RPM). Realiza a leitura visual da imagem, a transcrição 100% integral do texto e o cálculo das 5 competências do ENEM com citações obrigatórias em uma <strong className="font-bold text-[#26251e]">única passada multimodal</strong>.
           </p>
         </div>
       </div>
