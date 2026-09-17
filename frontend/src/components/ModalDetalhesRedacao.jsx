@@ -384,54 +384,54 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           )}
 
           {/* Navigation Tabs */}
-          <div className="px-6 border-b border-[#e6e5e0] bg-[#fafaf7] flex gap-4 overflow-x-auto custom-scrollbar">
+          <div className="px-6 border-b border-[#e6e5e0] bg-[#fafaf7] flex items-center gap-2 overflow-x-auto custom-scrollbar shrink-0 pt-2">
             <button
               type="button"
               onClick={() => setActiveTab('enem')}
-              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'enem'
-                ? 'border-[#f54e00] text-[#f54e00]'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'enem'
+                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
+                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
                 }`}
             >
               <Award className="w-4 h-4" />
-              Matriz ENEM (C1 a C5)
+              <span>Matriz ENEM (C1 a C5)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('sisedu')}
-              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'sisedu'
-                ? 'border-[#f54e00] text-[#f54e00]'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'sisedu'
+                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
+                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
                 }`}
             >
               <Compass className="w-4 h-4" />
-              Sisedu (Projeto Ágora Escolar)
+              <span>Sisedu (Projeto Ágora Escolar)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('texto')}
-              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'texto'
-                ? 'border-[#f54e00] text-[#f54e00]'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'texto'
+                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
+                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
                 }`}
             >
               <BookOpen className="w-4 h-4" />
-              Texto Integral Transcrito
+              <span>Texto Integral Transcrito</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
-              className={`py-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'preview'
-                ? 'border-[#f54e00] text-[#f54e00]'
-                : 'border-transparent text-[#807d72] hover:text-[#26251e]'
+              className={`px-3 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer -mb-px ${activeTab === 'preview'
+                ? 'border-[#f54e00] text-[#f54e00] bg-[#ffffff] rounded-t-md shadow-sm'
+                : 'border-transparent text-[#807d72] hover:text-[#26251e] hover:bg-[#eae8e1]'
                 }`}
               title="Pré-visualizar e testar o layout da Folha PDF"
             >
-              <FileText className="w-4 h-4 text-[#f54e00]" />
-              📄 Ver Prévia do PDF
+              <FileText className="w-4 h-4" />
+              <span>Prévia do PDF</span>
             </button>
           </div>
 
