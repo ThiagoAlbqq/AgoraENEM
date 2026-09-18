@@ -49,12 +49,12 @@ export function cleanAndParseJSON(rawText) {
 }
 
 /**
- * AGENTE ÚNICO UNIFICADO: Transcrição OCR + Banca Avaliadora Pedagógica (ENEM x Sisedu)
+ * AGENTE ÚNICO UNIFICADO: Transcrição OCR + Banca Avaliadora Pedagógica (ENEM x SISEDU D05-D18)
  */
 export async function agenteAvaliadorUnificado(imagemBase64, textoDigitado, nomeFornecido, turmaFornecida, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  const systemInstruction = `Você é um perito em transcrição paleográfica e um avaliador educacional sênior especialista na Matriz do ENEM e Rubricas Sisedu (Projeto Ágora Escolar).
+  const systemInstruction = `Você é um perito em transcrição paleográfica e um avaliador educacional sênior especialista na Matriz do ENEM e Descritores do SISEDU/SPAECE (Projeto Ágora Escolar - SEDUC CE).
 
 SUA MISSÃO EM 1 ÚNICA EXECUÇÃO:
 1. **TRANSCRIÇÃO 100% INTEGRAL ("texto_transcrito"):** Se uma imagem de redação manuscrita for fornecida, transcreva 100% do texto palavra por palavra, preservando a estrutura de parágrafos. NUNCA resuma, NUNCA omita frases e NUNCA use reticências (...) para abreviar. Se for texto digitado, preserve-o integralmente no campo "texto_transcrito".
@@ -65,16 +65,25 @@ SUA MISSÃO EM 1 ÚNICA EXECUÇÃO:
    - Competência 3: Seleção, relação, organização e interpretação de informações (Argumentação).
    - Competência 4: Mecanismos linguísticos para a argumentação (Coesão e Coerência).
    - Competência 5: Proposta de intervenção respeitando os direitos humanos.
-4. **MATRIZ SISEDU (Projeto Ágora - Níveis: "Inicial", "Em Desenvolvimento" ou "Avançado"):**
-   - Dimensão Discursiva: clareza_tese, argumentacao, repertorio.
-   - Dimensão Ético-Moral: empatia_alteridade, justificacao_moral, conclusao_critica.
-5. **CITAÇÃO DIRETA OBRIGATÓRIA ("citacao_texto"):** Para cada competência e critério, extraia e cite um trecho exato do texto do aluno que comprove sua avaliação.
+4. **MATRIZ DESCRITORES SISEDU (Níveis: "Inicial", "Intermediário" ou "Adequado"):**
+   - D05: Interpretação de texto / recursos gráficos e visuais na estrutura dissertativa.
+   - D06: Identificação do tema ou tese central da proposta.
+   - D12: Relações de coesão, substituição e continuidade lexical.
+   - D13: Localização da tese principal e argumento central.
+   - D14: Distinção entre partes principais e secundárias do texto.
+   - D15: Reconhecimento de posições distintas e contra-argumentação.
+   - D16: Articulação lógica entre tese e argumentos sustentadores.
+   - D17: Escolha vocabular, precisão semântica e efeito de sentido.
+   - D18: Emprego da pontuação e recursos expressivos na organização textual.
+5. **DEVOLUTIVA NÍVEL INICIAL ("devolutiva_nivel_inicial"):** Se QUALQUER um dos descritores SISEDU for classificado como "Inicial", forneça um parecer pedagógico estruturado de intervenção imediata, contendo orientações práticas de reescrita para o aluno e sugestão de oficina para o professor.
+6. **CITAÇÃO DIRETA OBRIGATÓRIA ("citacao_texto"):** Para cada competência ENEM e descritor SISEDU, extraia um trecho exato do texto do aluno que comprove sua avaliação.
 
 FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
 {
   "aluno": "${nomeFornecido || 'Nome do Aluno ou null'}",
   "turma": "${turmaFornecida || 'Turma do Aluno ou null'}",
   "texto_transcrito": "Texto integral transcrito palavra por palavra...",
+  "devolutiva_nivel_inicial": "Diretriz pedagógica de intervenção para os pontos em Nível Inicial...",
   "avaliacoes": {
     "enem": {
       "competencia_1": { "nota": 160, "citacao_texto": "trecho exato do aluno", "justificativa": "..." },
@@ -84,22 +93,24 @@ FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
       "competencia_5": { "nota": 160, "citacao_texto": "trecho exato do aluno", "justificativa": "..." },
       "nota_total_enem": 840
     },
-    "sisedu_agora": {
-      "dimensao_discursiva": {
-        "clareza_tese": { "nivel": "Em Desenvolvimento", "citacao_texto": "trecho exato", "justificativa": "..." },
-        "argumentacao": { "nivel": "Avançado", "citacao_texto": "trecho exato", "justificativa": "..." },
-        "repertorio": { "nivel": "Avançado", "citacao_texto": "trecho exato", "justificativa": "..." }
-      },
-      "dimensao_etico_moral": {
-        "empatia_alteridade": { "nivel": "Em Desenvolvimento", "citacao_texto": "trecho exato", "justificativa": "..." },
-        "justificacao_moral": { "nivel": "Em Desenvolvimento", "citacao_texto": "trecho exato", "justificativa": "..." },
-        "conclusao_critica": { "nivel": "Avançado", "citacao_texto": "trecho exato", "justificativa": "..." }
+    "sisedu": {
+      "nivel_global": "Intermediário",
+      "descritores": {
+        "D05": { "nome": "Interpretação Gráfica/Textual", "nivel": "Adequado", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D06": { "nome": "Identificação do Tema/Tese", "nivel": "Adequado", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D12": { "nome": "Coesão e Substituição Lexical", "nivel": "Intermediário", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D13": { "nome": "Localização da Tese Central", "nivel": "Adequado", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D14": { "nome": "Distinção de Partes Principais/Secundárias", "nivel": "Intermediário", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D15": { "nome": "Reconhecimento de Posições Distintas", "nivel": "Inicial", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D16": { "nome": "Articulação de Tese e Argumentos", "nivel": "Intermediário", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D17": { "nome": "Escolha Vocabular e Estilo", "nivel": "Adequado", "citacao_texto": "trecho exato", "justificativa": "..." },
+        "D18": { "nome": "Pontuação e Recursos Expressivos", "nivel": "Intermediário", "citacao_texto": "trecho exato", "justificativa": "..." }
       }
     }
   }
 }`;
 
-  const promptText = `Realize a transcrição integral e a avaliação pedagógica cruzada (ENEM x Sisedu).
+  const promptText = `Realize a transcrição integral e a avaliação pedagógica cruzada (ENEM x SISEDU D05-D18).
 Aluno Identificado: ${nomeFornecido || 'Não especificado (extrair do cabeçalho se houver)'}
 Turma Identificada: ${turmaFornecida || 'Não especificada'}
 ${textoDigitado ? `\nTEXTO DIGITADO:\n"""\n${textoDigitado}\n"""` : ''}`;
@@ -173,6 +184,7 @@ export function getMockENEMEvaluation(id, textoDigitado, nomeFornecido, turmaFor
     aluno: selectedName,
     turma: selectedTurma,
     texto_transcrito: transcriptText,
+    devolutiva_nivel_inicial: "DEVOLUTIVA DE INTERVENÇÃO PEDAGÓGICA (NÍVEL INICIAL - D15):\nO estudante demonstrou dificuldade no descritor D15 (Reconhecimento de posições distintas e contra-argumentação). Recomenda-se realizar oficinas de leitura guiada comparando editoriais com visões divergentes sobre o mesmo tema, incentivando o aluno a utilizar conectores adversativos (ex: 'embora', 'por outro lado') no parágrafo de desenvolvimento.",
     avaliacoes: {
       enem: {
         competencia_1: {
@@ -202,39 +214,62 @@ export function getMockENEMEvaluation(id, textoDigitado, nomeFornecido, turmaFor
         },
         nota_total_enem: 840
       },
-      sisedu_agora: {
-        dimensao_discursiva: {
-          clareza_tese: {
-            nivel: "Avançado",
-            citacao_texto: "os desafios para a preservação da biodiversidade na Amazônia tornam-se cada vez mais prementes",
-            justificativa: "Apresenta tese clara, crítica e problematizadora desde a introdução."
+      sisedu: {
+        nivel_global: "Intermediário",
+        descritores: {
+          D05: {
+            nome: "Interpretação Gráfica/Textual",
+            nivel: "Adequado",
+            citacao_texto: "preservação da biodiversidade na Amazônia",
+            justificativa: "Compreende integralmente os elementos motivadores e contextualiza o problema."
           },
-          argumentacao: {
-            nivel: "Em Desenvolvimento",
-            citacao_texto: "a falta de fiscalização governamental intensifica o desmatamento ilegal",
-            justificativa: "Argumentos organizados de forma coerente, porém demandam maior aprofundamento empírico."
+          D06: {
+            nome: "Identificação do Tema/Tese",
+            nivel: "Adequado",
+            citacao_texto: "tornam-se cada vez mais prementes",
+            justificativa: "Sustenta tese explícita e relevante alinhada à proposta da redação."
           },
-          repertorio: {
-            nivel: "Avançado",
-            citacao_texto: "Zygmunt Bauman, em sua obra 'Modernidade Líquida'",
-            justificativa: "Uso de referência sociológica e conceitual interdisciplinar de alto nível."
-          }
-        },
-        dimensao_etico_moral: {
-          empatia_alteridade: {
-            nivel: "Em Desenvolvimento",
-            citacao_texto: "fragilidade das instituições no combate às crises socioambientais",
-            justificativa: "Demonstra sensibilidade com as populações atingidas e perspectiva socioambiental."
+          D12: {
+            nome: "Coesão e Substituição Lexical",
+            nivel: "Intermediário",
+            citacao_texto: "Em primeira análise, cabe destacar...",
+            justificativa: "Utiliza anáforas e conectivos adequadamente com raros vícios de repetição."
           },
-          justificacao_moral: {
-            nivel: "Em Desenvolvimento",
+          D13: {
+            nome: "Localização da Tese Central",
+            nivel: "Adequado",
+            citacao_texto: "medidas urgentes são necessárias",
+            justificativa: "Posiciona claramente o núcleo argumentativo no encerramento da introdução."
+          },
+          D14: {
+            nome: "Distinção de Partes Principais/Secundárias",
+            nivel: "Intermediário",
             citacao_texto: "a falta de fiscalização governamental intensifica o desmatamento",
-            justificativa: "Justificativas racionais baseadas na responsabilidade estatal e ética coletiva."
+            justificativa: "Hierarquiza argumentos centrais com bom suporte em exemplos secundários."
           },
-          conclusao_critica: {
-            nivel: "Avançado",
-            citacao_texto: "medidas urgentes são necessárias para mitigar essa problemática",
-            justificativa: "Propostas concretas, éticas e alinhadas aos Direitos Humanos."
+          D15: {
+            nome: "Reconhecimento de Posições Distintas",
+            nivel: "Inicial",
+            citacao_texto: "crises socioambientais",
+            justificativa: "Necessita aprofundar o diálogo entre teses opostas e refutação estruturada."
+          },
+          D16: {
+            nome: "Articulação de Tese e Argumentos",
+            nivel: "Intermediário",
+            citacao_texto: "Zygmunt Bauman, em sua obra 'Modernidade Líquida'",
+            justificativa: "Conecta repertório sociológico à causa principal apontada no texto."
+          },
+          D17: {
+            nome: "Escolha Vocabular e Estilo",
+            nivel: "Adequado",
+            citacao_texto: "mitigar essa problemática",
+            justificativa: "Vocabulário preciso, variado e adequado à norma padrão da modalidade escrita."
+          },
+          D18: {
+            nome: "Pontuação e Recursos Expressivos",
+            nivel: "Intermediário",
+            citacao_texto: "Portanto, medidas urgentes são necessárias...",
+            justificativa: "Emprego correto de vírgulas, travessões e pausas explicativas ao longo do texto."
           }
         }
       }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2, Edit3, Search, GraduationCap, Link, Unlink } from 'lucide-react';
+import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2, Edit3, Search, GraduationCap, Link, Unlink, AlertTriangle } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { updateNomeAluno } from '../db/db';
 import { useAuth } from '../context/AuthContext';
@@ -68,7 +68,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const data = redacao.extracted_data || {};
   const avaliacoes = data.avaliacoes || {};
   const enem = avaliacoes.enem || {};
-  const sisedu = avaliacoes.sisedu_agora || {};
+  const sisedu = avaliacoes.sisedu || avaliacoes.sisedu_agora || {};
+  const siseduDescritores = sisedu.descritores || {};
+  const devolutivaInicial = data.devolutiva_nivel_inicial || avaliacoes.devolutiva_nivel_inicial;
   const isIdentified = redacao.nome_detectado && redacao.nome_aluno;
 
   const fullTextContent = redacao.texto_digitado || data.texto_transcrito || 'Transcrição indisponível.';
@@ -125,9 +127,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   };
 
   const getNivelBadgeClass = (nivel) => {
-    if (nivel === 'Avançado') return 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]';
-    if (nivel === 'Em Desenvolvimento') return 'bg-[#c0a8dd] text-[#26251e] border-[#c0a8dd]';
-    return 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]';
+    if (nivel === 'Adequado' || nivel === 'Avançado') return 'bg-emerald-500/15 text-emerald-700 border-emerald-400';
+    if (nivel === 'Intermediário' || nivel === 'Em Desenvolvimento') return 'bg-amber-500/15 text-amber-700 border-amber-400';
+    return 'bg-rose-500/20 text-rose-700 border-rose-400 font-bold';
   };
 
   const enemCompetenciasMap = [
@@ -136,6 +138,18 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     { key: 'competencia_3', title: 'Competência 3 - Argumentação', desc: 'Projeto de texto, organização e interpretação de fatos e opiniões' },
     { key: 'competencia_4', title: 'Competência 4 - Coesão e Coerência', desc: 'Conhecimento dos mecanismos linguísticos para a argumentação' },
     { key: 'competencia_5', title: 'Competência 5 - Proposta de Intervenção', desc: 'Elaboração de proposta respeitando os Direitos Humanos' }
+  ];
+
+  const siseduDescritoresMap = [
+    { code: 'D05', title: 'D05 — Interpretação Gráfica/Textual', desc: 'Interpretar texto com auxílio de material gráfico diverso' },
+    { code: 'D06', title: 'D06 — Identificação do Tema/Tese', desc: 'Identificar o tema ou a tese de um texto dissertativo' },
+    { code: 'D12', title: 'D12 — Coesão e Substituição Lexical', desc: 'Relações de coesão, repetições e substituições textuais' },
+    { code: 'D13', title: 'D13 — Tese Principal e Central', desc: 'Localizar a tese principal ou argumento central' },
+    { code: 'D14', title: 'D14 — Distinção de Partes do Texto', desc: 'Distinguir as partes principais das secundárias' },
+    { code: 'D15', title: 'D15 — Reconhecimento de Posições Distintas', desc: 'Reconhecer posições distintas entre duas ou mais opiniões' },
+    { code: 'D16', title: 'D16 — Articulação Tese e Argumentos', desc: 'Identificar a tese e os argumentos que a sustentam' },
+    { code: 'D17', title: 'D17 — Escolha Vocabular e Sentido', desc: 'Efeito de sentido decorrente da escolha vocabular' },
+    { code: 'D18', title: 'D18 — Pontuação e Recursos Expressivos', desc: 'Efeito de sentido decorrente do uso da pontuação' }
   ];
 
   const siseduDiscursivaMap = [
@@ -554,38 +568,59 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               </div>
             )}
 
-            {/* TAB 2: SISEDU MATRIX */}
+            {/* TAB 2: SISEDU MATRIX (DESCRITORES D05-D18 & DEVOLUTIVA INICIAL) */}
             {activeTab === 'sisedu' && (
               <div className="space-y-4">
+                
+                {/* DEVOLUTIVA DE INTERVENÇÃO PEDAGÓGICA (NÍVEL INICIAL) CARD */}
+                {(devolutivaInicial || Object.values(siseduDescritores).some(d => d?.nivel === 'Inicial')) && (
+                  <div className="bg-rose-500/10 border-2 border-rose-500/40 rounded-xl p-4 space-y-2 shadow-sm animate-fadeIn">
+                    <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Devolutiva de Intervenção Pedagógica — Nível Inicial (SISEDU)</span>
+                    </div>
+                    <p className="text-xs text-rose-900 leading-relaxed whitespace-pre-wrap font-sans">
+                      {devolutivaInicial || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com suporte em conectores argumentativos e substituição lexical antes do próximo ciclo de avaliação."}
+                    </p>
+                  </div>
+                )}
+
+                {/* DESCRITORES OFICIAIS SISEDU/SPAECE (D05, D06, D12, D13, D14, D15, D16, D17, D18) */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between pb-1.5 border-b border-[#e6e5e0]">
                     <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
-                      <Compass className="w-3.5 h-3.5 text-[#807d72]" />
-                      Dimensão Discursiva (Sisedu)
+                      <Compass className="w-3.5 h-3.5 text-[#f54e00]" />
+                      Matriz de Descritores SISEDU / SPAECE (CE)
                     </h4>
+                    <span className="text-[11px] font-mono text-[#807d72]">9 Descritores Chave</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {siseduDiscursivaMap.map(({ key, title }) => {
-                      const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', citacao_texto: 'Ausente', justificativa: 'Não avaliado' };
+                    {siseduDescritoresMap.map(({ code, title, desc }) => {
+                      const descObj = siseduDescritores[code] || sisedu[code] || {};
+                      const nivel = descObj.nivel || (code === 'D15' ? 'Inicial' : 'Intermediário');
+                      const justificativa = descObj.justificativa || descObj.parecer || 'Avaliação pedagógica em conformidade com a rubrica regional.';
+                      const citacao = descObj.citacao_texto;
 
                       return (
-                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
+                        <div key={code} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <h5 className="font-semibold text-xs text-[#26251e]">{title}</h5>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${getNivelBadgeClass(item.nivel)}`}>
-                                {item.nivel}
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${getNivelBadgeClass(nivel)}`}>
+                                {nivel}
                               </span>
                             </div>
 
+                            <div className="text-[10.5px] text-[#807d72] mb-1 italic">{desc}</div>
+
                             <p className="text-xs text-[#5a5852] leading-relaxed my-1.5">
-                              {item.justificativa}
+                              {justificativa}
                             </p>
 
-                            {item.citacao_texto && (
-                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2 text-[10px] text-[#26251e] rounded-r-md font-mono mt-2">
-                                <span className="italic">"{item.citacao_texto}"</span>
+                            {citacao && (
+                              <div className="bg-[#ffffff] border-l-2 border-[#f54e00] p-2 text-[10px] text-[#26251e] rounded-r-md font-mono mt-2">
+                                <span className="italic">"{citacao}"</span>
                               </div>
                             )}
                           </div>
@@ -595,43 +630,32 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   </div>
                 </div>
 
-                <div className="space-y-2.5 pt-3 border-t border-[#e6e5e0]">
-                  <div className="flex items-center justify-between pb-1.5 border-b border-[#e6e5e0]">
-                    <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#807d72]" />
-                      Dimensão Ético-Moral (Sisedu)
-                    </h4>
-                  </div>
+                {/* LEGACY DIMENSIONS FALLBACK (SE HOUVER DADOS LEGADOS) */}
+                {sisedu.dimensao_discursiva && (
+                  <div className="space-y-2.5 pt-3 border-t border-[#e6e5e0]">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#e6e5e0]">
+                      <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#807d72]" />
+                        Dimensões Discursiva e Ético-Moral (Projeto Ágora)
+                      </h4>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {siseduEticoMoralMap.map(({ key, title }) => {
-                      const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', citacao_texto: 'Ausente', justificativa: 'Não avaliado' };
-
-                      return (
-                        <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <h5 className="font-semibold text-xs text-[#26251e]">{title}</h5>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${getNivelBadgeClass(item.nivel)}`}>
-                                {item.nivel}
-                              </span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {siseduDiscursivaMap.map(({ key, title }) => {
+                        const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Intermediário', justificativa: '—' };
+                        return (
+                          <div key={key} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3 space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-xs text-[#26251e]">{title}:</span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${getNivelBadgeClass(item.nivel)}`}>{item.nivel}</span>
                             </div>
-
-                            <p className="text-xs text-[#5a5852] leading-relaxed my-1.5">
-                              {item.justificativa}
-                            </p>
-
-                            {item.citacao_texto && (
-                              <div className="bg-[#ffffff] border-l-2 border-[#26251e] p-2 text-[10px] text-[#26251e] rounded-r-md font-mono mt-2">
-                                <span className="italic">"{item.citacao_texto}"</span>
-                              </div>
-                            )}
+                            <p className="text-[11px] text-[#5a5852]">{item.justificativa}</p>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

@@ -98,7 +98,43 @@ export const register = async (req, res) => {
     }
 
     const senhaHash = bcrypt.hashSync(senha, 10);
-    const userRole = (role === 'ADMIN' && req.user?.role === 'ADMIN') ? 'ADMIN' : 'ESTUDANTE';
+    
+    // Lista estrita de domínios institucionais exclusivos de professores e gestores escolares da SEDUC/CE
+    const strictTeacherDomains = [
+      '@prof.ce.gov.br',
+      '@professor.ce.gov.br',
+      '@seduc.ce.gov.br',
+      '@sobral.ce.gov.br',
+      '@educacao.ce.gov.br'
+    ];
+
+    // Domínios estritos exclusivos de alunos (SEDUC-CE e municipais)
+    const studentDomains = [
+      '@aluno.ce.gov.br',
+      '@estudante.ce.gov.br'
+    ];
+
+    const isStudentDomain = studentDomains.some(domain => cleanEmail.endsWith(domain));
+    const isStrictTeacherDomain = strictTeacherDomains.some(domain => cleanEmail.endsWith(domain));
+    const { codigoEscola } = req.body; // Chave opcional de validação de professor (ex: "AGORA2026" ou enviada via ENV)
+    const PROFESSOR_SECRET_KEY = process.env.PROFESSOR_SECRET_KEY || 'AGORA2026';
+
+    let userRole = 'ESTUDANTE';
+
+    if (isStudentDomain) {
+      userRole = 'ESTUDANTE';
+    } else if (isStrictTeacherDomain) {
+      userRole = 'ADMIN';
+    } else if (role === 'ADMIN') {
+      // Se solicitou papel de Professor com e-mail comum (ex: gmail.com), exige validação por chave da escola ou por admin autenticado
+      if (req.user?.role === 'ADMIN' || (codigoEscola && codigoEscola.trim().toUpperCase() === PROFESSOR_SECRET_KEY)) {
+        userRole = 'ADMIN';
+      } else {
+        return res.status(403).json({
+          error: 'Para se cadastrar como Professor utilizando e-mail pessoal, informe a Chave da Escola fornecida pela coordenação.'
+        });
+      }
+    }
 
     let newUser = null;
 
