@@ -239,7 +239,7 @@ function AppContent() {
               )}
 
               {activeView === 'novo' && (
-                <UploaderView onRedacaoSaved={handleRedacaoSaved} />
+                <UploaderView onRedacaoSaved={handleRedacaoSaved} onSync={handleSync} />
               )}
 
               {(activeView === 'tabela' || activeView === 'sem_nome') && (

@@ -60,33 +60,6 @@ export default function Header({
       {/* Right Actions */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
 
-        {/* Corrigir Button (Admin only) - Styled with light orange background and border */}
-        {isAdmin && (
-          <button
-            type="button"
-            disabled={!isOnline || isSyncing || pendingCount === 0}
-            onClick={onSync}
-            className={`h-8 sm:h-10 px-2.5 sm:px-4 rounded-md text-xs font-medium flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              isOnline && pendingCount > 0
-                ? 'border border-[#dfa88f] bg-[#dfa88f]/20 hover:bg-[#dfa88f]/40 text-[#f54e00]'
-                : 'bg-[#e6e5e0] text-[#a09c92] border border-[#e6e5e0] cursor-not-allowed'
-            }`}
-          >
-            {isSyncing ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span className="hidden sm:inline">Avaliando...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="sm:hidden font-medium">({pendingCount})</span>
-                <span className="hidden sm:inline">Corrigir ({pendingCount})</span>
-              </>
-            )}
-          </button>
-        )}
-
         {/* Logout / Login Button */}
         {user ? (
           <button

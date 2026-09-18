@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, GraduationCap } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, GraduationCap, Sparkles } from 'lucide-react';
 import { saveRedacaoOffline, saveMultipleRedacoesOffline } from '../db/db';
+import { syncOfflineDocuments } from '../services/syncService';
 
-export default function UploaderView({ onRedacaoSaved }) {
+export default function UploaderView({ onRedacaoSaved, onSync }) {
   const [mode, setMode] = useState('imagem');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [typedText, setTypedText] = useState('');
@@ -58,9 +59,16 @@ export default function UploaderView({ onRedacaoSaved }) {
 
       await saveMultipleRedacoesOffline(itemsToSave);
 
+      // Trigger automatic AI evaluation immediately
+      if (onSync) {
+        await onSync();
+      } else {
+        await syncOfflineDocuments();
+      }
+
       setFeedback({
         type: 'success',
-        message: `${selectedFiles.length} redação(ões) salva(s) offline no banco local!`
+        message: `${selectedFiles.length} redação(ões) enviada(s) e avaliada(s) pela IA com sucesso!`
       });
 
       setSelectedFiles([]);
@@ -71,7 +79,7 @@ export default function UploaderView({ onRedacaoSaved }) {
     } catch (error) {
       setFeedback({
         type: 'error',
-        message: 'Falha ao salvar redações no banco local.'
+        message: `Erro na correção: ${error.message || 'Falha ao processar redação.'}`
       });
     } finally {
       setIsProcessing(false);
@@ -91,9 +99,16 @@ export default function UploaderView({ onRedacaoSaved }) {
         turma_manual: manualTurma.trim() || null
       });
 
+      // Trigger automatic AI evaluation immediately
+      if (onSync) {
+        await onSync();
+      } else {
+        await syncOfflineDocuments();
+      }
+
       setFeedback({
         type: 'success',
-        message: 'Redação em texto salva offline com sucesso!'
+        message: 'Redação digitada enviada e avaliada pela IA com sucesso!'
       });
 
       setTypedText('');
@@ -103,7 +118,7 @@ export default function UploaderView({ onRedacaoSaved }) {
     } catch (error) {
       setFeedback({
         type: 'error',
-        message: 'Falha ao salvar redação digitada.'
+        message: `Erro na correção: ${error.message || 'Falha ao processar redação.'}`
       });
     } finally {
       setIsProcessing(false);
@@ -259,12 +274,12 @@ export default function UploaderView({ onRedacaoSaved }) {
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Salvando no Banco Local...
+                  Corrigindo com Inteligência Artificial...
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
-                  Salvar {selectedFiles.length > 0 ? selectedFiles.length : ''} Redação(ões) Offline
+                  <Sparkles className="w-4 h-4 text-white" />
+                  Enviar & Corrigir {selectedFiles.length > 0 ? `${selectedFiles.length} ` : ''}Redação(ões) com IA
                 </>
               )}
             </button>
@@ -303,12 +318,12 @@ export default function UploaderView({ onRedacaoSaved }) {
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Salvando...
+                  Corrigindo com Inteligência Artificial...
                 </>
               ) : (
                 <>
-                  <FileText className="w-4 h-4" />
-                  Salvar Redação Digitada Offline
+                  <Sparkles className="w-4 h-4 text-white" />
+                  Enviar & Corrigir Redação Digitada com IA
                 </>
               )}
             </button>
