@@ -106,20 +106,39 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     }
   };
 
+  // Helper to strip HTML tags and prevent unescaped raw HTML from rendering as text
+  const sanitizePdfText = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/<[^>]*>?/gm, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/[\u0080-\u009F]/g, '') // Remove unprintable control characters causing mojibake
+      .trim();
+  };
+
   const handleDownloadPDF = async () => {
     const element = document.getElementById('minimalist-pdf-document');
     if (!element) return;
 
     setIsGeneratingPDF(true);
     try {
-      const studentNameClean = (redacao.nome_aluno || data.aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
+      const studentNameClean = sanitizePdfText(redacao.nome_aluno || data.aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
       const opt = {
-        margin: [8, 8, 8, 8],
+        margin: 0, // Controlled internally inside 210mm x 297mm A4 containers to guarantee exactly 2 pages
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          letterRendering: true,
+          windowWidth: 794 // Exact 210mm width at 96dpi
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
       };
@@ -179,49 +198,56 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     // Generate a deterministic SHA-256 style validation hash for visual authenticity
     const authHash = `SHA256:${String(redacao.id * 7919 + 104729).padStart(8, '0')}FE${String(redacao.id * 104729).substring(0, 16).toUpperCase()}`;
 
-    // Format text into numbered lines (1 to max 30) for paged essay sheet display
-    const rawLines = fullTextContent.split('\n');
+    // Format text into numbered lines (1 to max 25) for clean paged essay sheet display
+    const sanitizedFullText = sanitizePdfText(fullTextContent);
+    const rawLines = sanitizedFullText.split('\n');
     const numberedLines = [];
     let currentLineNum = 1;
     
     rawLines.forEach(paragraph => {
+      if (currentLineNum > 25) return; // Strict line limit for Page 2
       if (!paragraph.trim()) {
         numberedLines.push({ num: currentLineNum++, text: '' });
         return;
       }
-      // Chunk long lines to fit ~70 characters per line
-      const lineChunks = paragraph.match(/.{1,70}(\s|$)/g) || [paragraph];
+      // Chunk long lines to fit ~75 characters per line
+      const lineChunks = paragraph.match(/.{1,75}(\s|$)/g) || [paragraph];
       lineChunks.forEach(chunk => {
-        numberedLines.push({ num: currentLineNum++, text: chunk.trim() });
+        if (currentLineNum <= 25) {
+          numberedLines.push({ num: currentLineNum++, text: chunk.trim() });
+        }
       });
     });
 
+    const studentNameDisplay = sanitizePdfText(redacao.nome_aluno || data.aluno || 'Estudante Não Identificado');
+    const turmaDisplay = sanitizePdfText(redacao.turma_aluno || data.turma || 'Geral');
+
     return (
-      <div id="minimalist-pdf-document" className="w-[720px] bg-transparent text-[#0f172a] space-y-6 font-sans text-xs">
+      <div id="minimalist-pdf-document" className="w-[794px] max-w-[794px] bg-[#ffffff] text-[#0b2447] font-sans text-xs box-border">
 
         {/* ==================== PAGE 1: AVALIAÇÃO PEDAGÓGICA (ENEM + SISEDU) ==================== */}
-        <div className="relative w-[720px] min-h-[960px] bg-[#ffffff] text-[#0f172a] p-6 font-sans text-xs border border-[#cbd5e1] rounded-lg box-border flex flex-col justify-between shadow-sm overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0b2447] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           
           {/* Subtle Diagonal Institutional Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] rotate-[-30deg] select-none z-0">
-            <span className="text-4xl font-black font-mono tracking-widest text-[#0f172a] uppercase text-center leading-tight">
+            <span className="text-4xl font-black font-mono tracking-widest text-[#0b2447] uppercase text-center leading-tight">
               SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
             </span>
           </div>
 
           <div className="space-y-4 relative z-10">
             {/* Top Institutional Header Bar */}
-            <div className="border-b-2 border-[#0f172a] pb-3 flex justify-between items-stretch" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div className="border-b-2 border-[#0b2447] pb-3 flex justify-between items-stretch" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded bg-[#0f172a] text-[#ffffff] flex flex-col items-center justify-center font-extrabold tracking-tighter text-base border-2 border-[#b45309] shrink-0 shadow-sm">
+                <div className="w-12 h-12 rounded bg-[#0b2447] text-[#ffffff] flex flex-col items-center justify-center font-extrabold tracking-tighter text-base border-2 border-[#c9a227] shrink-0 shadow-sm">
                   <span>ÁG</span>
                   <span className="text-[8px] tracking-widest text-[#f59e0b] font-mono -mt-1">ENEM</span>
                 </div>
                 <div>
-                  <h1 className="text-base font-extrabold tracking-tight text-[#0f172a] uppercase font-sans leading-none">
+                  <h1 className="text-base font-extrabold tracking-tight text-[#0b2447] uppercase font-sans leading-none">
                     ÁGORA ENEM — FICHA DE AVALIAÇÃO DE REDAÇÃO
                   </h1>
-                  <p className="text-[9.5px] font-semibold text-[#b45309] uppercase tracking-wider mt-1 font-mono">
+                  <p className="text-[9.5px] font-semibold text-[#c9a227] uppercase tracking-wider mt-1 font-mono">
                     SECRETARIA DA EDUCAÇÃO • SISTEMA PREDITIVO DE AVALIAÇÃO TEXTUAL (ENEM x SISEDU)
                   </p>
                 </div>
@@ -229,10 +255,10 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
               <div className="text-right font-mono text-[9px] text-[#475569] bg-[#f8fafc] border border-[#e2e8f0] px-3 py-1.5 rounded flex flex-col justify-center items-end shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[#0f172a] font-bold">REGISTRO:</span>
-                  <span className="bg-[#0f172a] text-[#ffffff] px-1.5 py-0.5 rounded font-bold text-[9.5px]">#{String(redacao.id).padStart(5, '0')}</span>
+                  <span className="text-[#0b2447] font-bold">REGISTRO:</span>
+                  <span className="bg-[#0b2447] text-[#ffffff] px-1.5 py-0.5 rounded font-bold text-[9.5px]">#{String(redacao.id).padStart(5, '0')}</span>
                 </div>
-                <div className="mt-1 text-[#64748b]">EMISSÃO: <strong className="text-[#0f172a]">{printDateStr} {printTimeStr}</strong></div>
+                <div className="mt-1 text-[#64748b]">EMISSÃO: <strong className="text-[#0b2447]">{printDateStr} {printTimeStr}</strong></div>
                 <div className="mt-0.5 inline-block text-[8px] font-sans font-bold uppercase text-[#047857] bg-[#ecfdf5] border border-[#a7f3d0] px-1 rounded">
                   Documento Oficial Autenticado
                 </div>
@@ -241,23 +267,23 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
             {/* Student Identification & Score Banner Card */}
             <div className="grid grid-cols-12 gap-3 bg-[#f8fafc] border border-[#cbd5e1] p-3 rounded.lg font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="col-span-8 space-y-1.5 pr-2 border-r border-[#e2e8f0]">
+              <div className="col-span-8 space-y-2 pr-3 border-r border-[#e2e8f0]">
                 <div className="flex flex-col">
                   <span className="text-[#64748b] uppercase text-[8.5px] font-sans font-bold tracking-wider">Estudante Avaliado:</span>
-                  <strong className="text-base text-[#0f172a] font-sans font-bold truncate">{redacao.nome_aluno || data.aluno || 'Estudante Não Identificado'}</strong>
+                  <strong className="text-base text-[#0b2447] font-sans font-bold truncate">{studentNameDisplay}</strong>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-[10px] pt-1">
+                <div className="grid grid-cols-3 gap-3 text-[10px] pt-1">
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans">TURMA:</span>
-                    <strong className="text-[#0f172a] truncate block">{redacao.turma_aluno || data.turma || 'Sem Turma'}</strong>
+                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">TURMA:</span>
+                    <strong className="text-[#0b2447] truncate block">{turmaDisplay}</strong>
                   </div>
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans">LANÇAMENTO:</span>
-                    <strong className="text-[#0f172a] block">{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong>
+                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">DATA LANÇAMENTO:</span>
+                    <strong className="text-[#0b2447] block">{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong>
                   </div>
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans">ORIGEM DO TEXTO:</span>
-                    <strong className="text-[#0f172a] block">{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong>
+                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">ENTRADA DO TEXTO:</span>
+                    <strong className="text-[#0b2447] block">{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong>
                   </div>
                 </div>
               </div>
@@ -265,29 +291,29 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               {/* Total ENEM Score Badge */}
               <div className="col-span-4 flex flex-col justify-center items-center text-center pl-1">
                 <span className="text-[8.5px] font-sans font-extrabold uppercase tracking-wider text-[#b45309]">NOTA FINAL ENEM</span>
-                <div className="my-1 px-3 py-1 bg-[#0f172a] text-[#ffffff] rounded-lg border-2 border-[#b45309] shadow-sm flex items-baseline gap-1">
+                <div className="my-1 px-4 py-1.5 bg-[#0b2447] text-[#ffffff] rounded-lg border-2 border-[#c9a227] shadow-xs flex items-baseline gap-1">
                   <span className="text-2xl font-black font-mono text-[#f59e0b] leading-none">
                     {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'}
                   </span>
                   <span className="text-[10px] font-medium text-[#94a3b8]">/ 1000</span>
                 </div>
-                <span className="text-[8px] font-sans text-[#64748b]">Matriz Oficial do Exame Nacional</span>
+                <span className="text-[8px] font-sans text-[#64748b]">Escala Oficial MEC</span>
               </div>
             </div>
 
             {/* SECTION 1: TABELA COMPACTA DE COMPETÊNCIAS ENEM (C1 A C5) */}
-            <div className="mt-4 space-y-2" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="flex items-center justify-between border-b-2 border-[#0f172a] pb-1">
-                <h2 className="text-xs font-extrabold uppercase text-[#0f172a] tracking-wider font-sans flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#b45309] inline-block"></span>
+            <div className="mt-3 space-y-1.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div className="flex items-center justify-between border-b-2 border-[#0b2447] pb-1">
+                <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#c9a227] inline-block"></span>
                   1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
                 </h2>
                 <span className="text-[9px] font-mono text-[#64748b] uppercase">Pesos Oficiais MEC</span>
               </div>
 
-              <table className="w-full text-left border-collapse text-[10px] border border-[#cbd5e1] shadow-xs">
+              <table className="w-full text-left border-collapse text-[9.5px] border border-[#cbd5e1] shadow-2xs">
                 <thead>
-                  <tr className="bg-[#0f172a] text-[#ffffff] font-mono text-[9px] uppercase tracking-wider">
+                  <tr className="bg-[#0b2447] text-[#ffffff] font-mono text-[8.5px] uppercase tracking-wider">
                     <th className="p-2 border-r border-[#334155] w-1/4">Competência</th>
                     <th className="p-2 border-r border-[#334155] text-center w-24">Pontuação</th>
                     <th className="p-2 border-r border-[#334155] w-1/3">Evidência / Citação no Texto</th>
@@ -301,26 +327,29 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     const bgClass = isEven ? 'bg-[#ffffff]' : 'bg-[#f8fafc]';
                     const scorePct = Math.min(100, Math.max(0, (comp.nota / 200) * 100));
 
+                    const cleanCitacao = sanitizePdfText(comp.citacao_texto);
+                    const cleanParecer = sanitizePdfText(comp.justificativa);
+
                     return (
                       <tr key={key} className={`align-top ${bgClass} border-b border-[#e2e8f0]`} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                        <td className="p-2 border-r border-[#e2e8f0] font-semibold text-[#0f172a]">
-                          <div className="font-bold text-[#0f172a]">{title}</div>
+                        <td className="p-1.5 border-r border-[#e2e8f0] font-semibold text-[#0b2447]">
+                          <div className="font-bold text-[#0b2447]">{title}</div>
                         </td>
-                        <td className="p-2 border-r border-[#e2e8f0] text-center font-mono">
-                          <div className="font-extrabold text-sm text-[#0f172a]">{comp.nota} <span className="text-[9px] font-normal text-[#64748b]">/200</span></div>
+                        <td className="p-1.5 border-r border-[#e2e8f0] text-center font-mono">
+                          <div className="font-extrabold text-xs text-[#0b2447]">{comp.nota} <span className="text-[8px] font-normal text-[#64748b]">/200</span></div>
                           {/* Visual Score Bar */}
-                          <div className="w-full bg-[#e2e8f0] rounded-full h-1.5 mt-1 overflow-hidden">
+                          <div className="w-full bg-[#e2e8f0] rounded-full h-1 mt-1 overflow-hidden">
                             <div 
-                              className="h-full bg-[#0f172a]" 
+                              className="h-full bg-[#0b2447]" 
                               style={{ width: `${scorePct}%` }}
                             />
                           </div>
                         </td>
-                        <td className="p-2 border-r border-[#e2e8f0] font-mono text-[9px] italic text-[#334155] bg-[#f1f5f9]/50">
-                          {comp.citacao_texto ? `"${comp.citacao_texto}"` : '—'}
+                        <td className="p-1.5 border-r border-[#e2e8f0] font-mono text-[8.5px] italic text-[#334155] bg-[#f1f5f9]/50 leading-tight">
+                          {cleanCitacao ? `"${cleanCitacao}"` : '—'}
                         </td>
-                        <td className="p-2 leading-tight text-[#1e293b] text-[9.5px]">
-                          {comp.justificativa}
+                        <td className="p-1.5 leading-tight text-[#1e293b] text-[9px]">
+                          {cleanParecer}
                         </td>
                       </tr>
                     );
@@ -330,9 +359,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             </div>
 
             {/* SECTION 2: MATRIZ DESCRITORES SISEDU / SPAECE (D05 - D18) */}
-            <div className="mt-4 space-y-2" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="flex items-center justify-between border-b-2 border-[#0f172a] pb-1">
-                <h2 className="text-xs font-extrabold uppercase text-[#0f172a] tracking-wider font-sans flex items-center gap-1.5">
+            <div className="mt-3 space-y-1.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div className="flex items-center justify-between border-b-2 border-[#0b2447] pb-1">
+                <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#047857] inline-block"></span>
                   2. DESCRITORES DE DESEMPENHO SISEDU / SPAECE (D05 A D18)
                 </h2>
@@ -343,7 +372,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 {siseduDescritoresMap.map(({ code, title }) => {
                   const descObj = siseduDescritores[code] || sisedu[code] || {};
                   const nivel = descObj.nivel || (code === 'D15' ? 'Inicial' : 'Intermediário');
-                  const justificativa = descObj.justificativa || 'Avaliação pedagógica em conformidade com as rubricas regionais.';
+                  const cleanJustificativa = sanitizePdfText(descObj.justificativa || 'Avaliação pedagógica em conformidade com as rubricas regionais.');
                   
                   let badgeStyle = 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'; // Avançado / Adequado
                   if (nivel === 'Intermediário' || nivel === 'Em Desenvolvimento') {
@@ -353,15 +382,15 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   }
 
                   return (
-                    <div key={code} className="border border-[#cbd5e1] p-2 rounded bg-[#ffffff] font-mono text-[9px] flex flex-col justify-between shadow-2xs">
+                    <div key={code} className="border border-[#cbd5e1] p-1.5 rounded bg-[#ffffff] font-mono text-[9px] flex flex-col justify-between shadow-2xs">
                       <div>
-                        <div className="flex items-center justify-between font-bold text-[#0f172a] border-b border-[#e2e8f0] pb-1 mb-1">
-                          <span className="font-extrabold text-[#0f172a] text-[10px]">{code}</span>
+                        <div className="flex items-center justify-between font-bold text-[#0b2447] border-b border-[#e2e8f0] pb-0.5 mb-1">
+                          <span className="font-extrabold text-[#0b2447] text-[9.5px]">{code}</span>
                           <span className={`px-1.5 py-0.2 text-[8px] font-sans font-bold uppercase rounded border ${badgeStyle}`}>
                             {nivel}
                           </span>
                         </div>
-                        <p className="text-[#334155] leading-tight text-[8.5px] font-sans mt-1">{justificativa}</p>
+                        <p className="text-[#334155] leading-tight text-[8px] font-sans mt-0.5">{cleanJustificativa}</p>
                       </div>
                     </div>
                   );
@@ -371,9 +400,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Page 1 Footer */}
-          <div className="pt-3 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8.5px] text-[#64748b] relative z-10">
+          <div className="pt-2 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
             <div>Sistema Ágora ENEM • Secretaria da Educação • Documento Oficial de Avaliação</div>
-            <div className="font-bold text-[#0f172a]">Página 01 / 02</div>
+            <div className="font-bold text-[#0b2447]">Página 01 / 02</div>
           </div>
         </div>
 
@@ -381,11 +410,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
         <div className="html2pdf__page-break" style={{ pageBreakBefore: 'always', breakBefore: 'page' }} />
 
         {/* ==================== PAGE 2: TRANSCRIÇÃO INTEGRAL & ASSINATURA ==================== */}
-        <div className="relative w-[720px] min-h-[960px] bg-[#ffffff] text-[#0f172a] p-6 font-sans text-xs border border-[#cbd5e1] rounded-lg box-border flex flex-col justify-between shadow-sm overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0b2447] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           
           {/* Subtle Diagonal Institutional Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] rotate-[-30deg] select-none z-0">
-            <span className="text-4xl font-black font-mono tracking-widest text-[#0f172a] uppercase text-center leading-tight">
+            <span className="text-4xl font-black font-mono tracking-widest text-[#0b2447] uppercase text-center leading-tight">
               SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
             </span>
           </div>
@@ -393,34 +422,34 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-between">
             <div>
               {/* Page 2 Mini Reference Header */}
-              <div className="border-b-2 border-[#0f172a] pb-2 flex justify-between items-center font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div className="border-b-2 border-[#0b2447] pb-2 flex justify-between items-center font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#0f172a] text-[#ffffff] px-1.5 py-0.5 rounded font-bold">ANEXO II</span>
-                  <strong className="text-[#0f172a] uppercase font-sans text-[10px]">Transcrição Verbatim do Texto Original</strong>
+                  <span className="bg-[#0b2447] text-[#ffffff] px-1.5 py-0.5 rounded font-bold">ANEXO II</span>
+                  <strong className="text-[#0b2447] uppercase font-sans text-[10px]">Transcrição Verbatim do Texto Original</strong>
                 </div>
-                <div>REGISTRO: <strong className="text-[#0f172a]">#{String(redacao.id).padStart(5, '0')}</strong> • ESTUDANTE: <strong className="text-[#0f172a]">{redacao.nome_aluno || data.aluno || 'Estudante'}</strong></div>
+                <div>REGISTRO: <strong className="text-[#0b2447]">#{String(redacao.id).padStart(5, '0')}</strong> • ESTUDANTE: <strong className="text-[#0b2447]">{studentNameDisplay}</strong></div>
               </div>
 
-              {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO COM LINHAS PAUTADAS */}
-              <div className="mt-4 space-y-2 flex-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO COM LINHAS PAUTADAS (MAX 25 LINHAS) */}
+              <div className="mt-3 space-y-2 flex-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="flex items-center justify-between border-b border-[#cbd5e1] pb-1">
-                  <h2 className="text-xs font-extrabold uppercase text-[#0f172a] tracking-wider font-sans flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0f172a] inline-block"></span>
+                  <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#0b2447] inline-block"></span>
                     3. TRANSCRIÇÃO FIEL DO TEXTO MANUSCRITO / DIGITADO
                   </h2>
-                  <span className="text-[8.5px] font-mono text-[#64748b] uppercase">Fórmula de Transcrição Integral</span>
+                  <span className="text-[8.5px] font-mono text-[#64748b] uppercase">Folha Oficial de Transcrição</span>
                 </div>
 
-                <div className="border border-[#cbd5e1] bg-[#ffffff] rounded overflow-hidden font-mono text-[10px] shadow-2xs min-h-[420px]">
+                <div className="border border-[#cbd5e1] bg-[#ffffff] rounded overflow-hidden font-mono text-[10px] shadow-2xs">
                   <table className="w-full border-collapse">
                     <tbody>
-                      {numberedLines.slice(0, 30).map(({ num, text }) => (
-                        <tr key={num} className="border-b border-[#f1f5f9] hover:bg-[#f8fafc]">
-                          <td className="w-8 py-1 px-2 text-center text-[#94a3b8] bg-[#f8fafc] border-r border-[#e2e8f0] font-bold text-[9px] select-none">
+                      {numberedLines.map(({ num, text }) => (
+                        <tr key={num} className="border-b border-[#f1f5f9]">
+                          <td className="w-9 py-1 px-2 text-center text-[#94a3b8] bg-[#f8fafc] border-r border-[#e2e8f0] font-bold text-[9px] select-none">
                             {String(num).padStart(2, '0')}
                           </td>
-                          <td className="py-1 px-3 text-[#1e293b] leading-snug whitespace-pre-wrap font-sans">
-                            {text || <span className="text-[#cbd5e1] font-mono italic text-[8.5px]"></span>}
+                          <td className="py-1 px-3 text-[#1e293b] leading-snug whitespace-pre-wrap font-sans text-[10px]">
+                            {text || <span className="text-[#cbd5e1] italic"></span>}
                           </td>
                         </tr>
                       ))}
@@ -431,28 +460,28 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             </div>
 
             {/* SECTION 4: BLOCO DE AUTENTICIDADE DIGITAL E ASSINATURA */}
-            <div className="pt-4 border-t-2 border-[#0f172a] grid grid-cols-12 gap-4 items-end mt-4 font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div className="pt-3 border-t-2 border-[#0b2447] grid grid-cols-12 gap-4 items-end mt-2 font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               
               {/* Digital Authenticity Stamp & Hash */}
-              <div className="col-span-7 bg-[#f8fafc] border border-[#cbd5e1] p-3 rounded space-y-1.5">
-                <div className="flex items-center gap-1.5 text-[#047857] font-bold font-sans text-[10px]">
+              <div className="col-span-7 bg-[#f8fafc] border border-[#cbd5e1] p-3 rounded space-y-1">
+                <div className="flex items-center gap-1.5 text-[#047857] font-bold font-sans text-[9.5px]">
                   <ShieldCheck className="w-4 h-4 text-[#047857]" />
                   AUTENTICAÇÃO DIGITAL DA AVALIAÇÃO
                 </div>
-                <p className="text-[8.5px] font-sans text-[#475569] leading-tight">
+                <p className="text-[8px] font-sans text-[#475569] leading-tight">
                   Este documento foi avaliado pelo Agente Unificado Ágora ENEM e validado pedagogicamente com base nas diretrizes oficiais do MEC e da SEDUC.
                 </p>
-                <div className="pt-1 text-[8px] text-[#64748b] border-t border-[#e2e8f0] flex flex-col gap-0.5">
-                  <div>CÓDIGO HASH: <strong className="text-[#0f172a]">{authHash}</strong></div>
-                  <div>CHAVE DE VALIDAÇÃO: <strong className="text-[#0f172a]">AGORA-2026-MEC-SEDUC-CE</strong></div>
+                <div className="pt-1 text-[7.5px] text-[#64748b] border-t border-[#e2e8f0] flex flex-col gap-0.5">
+                  <div>CÓDIGO HASH: <strong className="text-[#0b2447]">{authHash}</strong></div>
+                  <div>CHAVE DE VALIDAÇÃO: <strong className="text-[#0b2447]">AGORA-2026-MEC-SEDUC-CE</strong></div>
                 </div>
               </div>
 
               {/* Teacher Signature Line */}
               <div className="col-span-5 text-center flex flex-col justify-end items-center">
-                <div className="w-full border-t-2 border-[#0f172a] pt-1.5 mt-8">
-                  <div className="font-extrabold text-[#0f172a] font-sans text-[10.5px] uppercase">Assinatura do Professor / Avaliador</div>
-                  <div className="text-[8.5px] text-[#64748b] font-sans">Visto de Validação Pedagógica</div>
+                <div className="w-full border-t-2 border-[#0b2447] pt-1.5 mt-6">
+                  <div className="font-extrabold text-[#0b2447] font-sans text-[10px] uppercase">Assinatura do Professor / Avaliador</div>
+                  <div className="text-[8px] text-[#64748b] font-sans">Visto de Validação Pedagógica</div>
                 </div>
               </div>
 
@@ -461,9 +490,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Page 2 Footer */}
-          <div className="pt-3 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8.5px] text-[#64748b] relative z-10">
+          <div className="pt-2 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
             <div>Sistema Ágora ENEM • Secretaria da Educação • Anexo II de Transcrição</div>
-            <div className="font-bold text-[#0f172a]">Página 02 / 02</div>
+            <div className="font-bold text-[#0b2447]">Página 02 / 02</div>
           </div>
         </div>
 
