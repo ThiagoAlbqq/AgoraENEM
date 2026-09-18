@@ -30,6 +30,7 @@ function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [redacoes, setRedacoes] = useState([]);
+  const [rankingRedacoes, setRankingRedacoes] = useState([]);
   const [isLoadingRedacoes, setIsLoadingRedacoes] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -57,40 +58,53 @@ function AppContent() {
   const loadRedacoes = async (silent = false) => {
     if (!silent) setIsLoadingRedacoes(true);
     try {
-      let cloudDocs = [];
-      const fetched = await authService.fetchCloudRedacoes();
-      if (Array.isArray(fetched)) cloudDocs = fetched;
+      // 1. Busca redações da nuvem e dados completos de ranking em paralelo
+      const [cloudDocsRes, rankingDocsRes] = await Promise.all([
+        authService.fetchCloudRedacoes(),
+        authService.fetchRankingRedacoes()
+      ]);
 
-      const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-
-      // Combine cloudDocs and localDocs seamlessly (avoiding duplicates)
-      const combined = [...cloudDocs];
-      for (const local of localDocs) {
-        const isAlreadyInCloud = cloudDocs.some(c =>
-          String(c.id) === String(local.id) ||
-          String(c.id) === String(local.cloud_id) ||
-          (c.nome_aluno && local.nome_aluno && c.nome_aluno.trim().toLowerCase() === local.nome_aluno.trim().toLowerCase() && c.data_captura === local.data_captura)
-        );
-        if (!isAlreadyInCloud) {
-          combined.unshift(local);
-        }
-      }
+      const cloudDocs = Array.isArray(cloudDocsRes) ? cloudDocsRes : [];
+      const rankingDocs = Array.isArray(rankingDocsRes) ? rankingDocsRes : [];
 
       if (!isAdmin && user && user.role === 'ESTUDANTE') {
+        // Para Estudante: Não carregar 51 redações locais de outros alunos (evita piscar!)
+        // Mostrar apenas as redações validadas do próprio estudante logado
         const cleanName = (user.nome || '').toLowerCase().trim();
-        const studentDocs = combined.filter(r =>
+        const studentCloudDocs = cloudDocs.filter(r =>
           (r.user_id && Number(r.user_id) === Number(user.id)) ||
-          (cleanName && r.nome_aluno && r.nome_aluno.toLowerCase().trim() === cleanName) ||
-          (!r.is_synced)
+          (cleanName && r.nome_aluno && r.nome_aluno.toLowerCase().trim() === cleanName)
         );
-        setRedacoes(studentDocs);
+
+        setRedacoes(studentCloudDocs);
+        setRankingRedacoes(rankingDocs.length > 0 ? rankingDocs : cloudDocs);
       } else {
+        // Para Admin / Professor: Carregar nuvem + locais
+        const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+        const combined = [...cloudDocs];
+        for (const local of localDocs) {
+          const isAlreadyInCloud = cloudDocs.some(c =>
+            String(c.id) === String(local.id) ||
+            String(c.id) === String(local.cloud_id) ||
+            (c.nome_aluno && local.nome_aluno && c.nome_aluno.trim().toLowerCase() === local.nome_aluno.trim().toLowerCase() && c.data_captura === local.data_captura)
+          );
+          if (!isAlreadyInCloud) {
+            combined.unshift(local);
+          }
+        }
         setRedacoes(combined);
+        setRankingRedacoes(rankingDocs.length > 0 ? rankingDocs : combined);
       }
     } catch (error) {
       console.error('Falha ao carregar redações:', error);
-      const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-      setRedacoes(localDocs);
+      if (isAdmin) {
+        const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+        setRedacoes(localDocs);
+        setRankingRedacoes(localDocs);
+      } else {
+        setRedacoes([]);
+        setRankingRedacoes([]);
+      }
     } finally {
       if (!silent) setIsLoadingRedacoes(false);
     }
@@ -255,7 +269,7 @@ function AppContent() {
 
               {activeView === 'ranking' && (
                 <RankingView
-                  redacoes={redacoes}
+                  redacoes={rankingRedacoes.length > 0 ? rankingRedacoes : redacoes}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                 />
               )}

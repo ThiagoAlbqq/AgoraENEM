@@ -2,6 +2,7 @@ import express from 'express';
 import {
   syncLegacyRedacoes,
   getRedacoes,
+  getRanking,
   createRedacao,
   vincularAlunoRedacao,
   validarRedacao,
@@ -15,6 +16,7 @@ const router = express.Router();
 
 router.get('/export-db', exportDatabase);
 router.get('/export', exportDatabase);
+router.get('/ranking', optionalAuthenticate, getRanking);
 router.post('/sync-legacy', authenticate, syncLegacyRedacoes);
 router.get('/', optionalAuthenticate, getRedacoes);
 router.post('/', authenticate, createRedacao);

@@ -162,6 +162,25 @@ export const authService = {
     }
   },
 
+  async fetchRankingRedacoes() {
+    const token = this.getToken();
+    const headers = {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/redacoes/ranking?_t=${Date.now()}`, { headers });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.ranking || [];
+    } catch (err) {
+      console.warn('Erro ao buscar ranking na nuvem:', err);
+      return [];
+    }
+  },
+
   async validarRedacao(id, payload = {}) {
     const token = this.getToken();
     if (!token) throw new Error('Apenas professores autenticados podem validar correções.');

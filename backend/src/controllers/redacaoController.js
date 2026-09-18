@@ -277,6 +277,58 @@ export const getRedacoes = async (req, res) => {
   }
 };
 
+// GET /api/redacoes/ranking
+// Retorna todas as redações validadas com pontuação para o quadro de ranking escolar
+export const getRanking = async (req, res) => {
+  try {
+    let formatted = [];
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('redacoes')
+        .select('id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced')
+        .eq('status_validacao', 'VALIDADA')
+        .order('nota_final', { ascending: false });
+
+      if (error) {
+        console.error('[Supabase GetRanking Error]:', error.message);
+      } else {
+        formatted = (data || []).map(r => ({
+          id: r.id,
+          user_id: r.user_id,
+          nome_aluno: r.nome_aluno,
+          turma_aluno: r.turma_aluno,
+          nota_final: r.nota_final,
+          data_captura: r.data_captura,
+          status_validacao: r.status_validacao,
+          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+          is_synced: true
+        }));
+      }
+    }
+
+    if (formatted.length === 0 && !isSupabaseConfigured && db) {
+      const rows = db.prepare(`
+        SELECT id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced
+        FROM redacoes
+        WHERE status_validacao = 'VALIDADA'
+        ORDER BY nota_final DESC
+      `).all();
+
+      formatted = rows.map(r => ({
+        ...r,
+        extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+        is_synced: true
+      }));
+    }
+
+    return res.status(200).json({ ranking: formatted });
+  } catch (err) {
+    console.error('[GetRanking Error]:', err);
+    return res.status(500).json({ error: 'Erro ao carregar o ranking de notas.' });
+  }
+};
+
 // POST /api/redacoes
 export const createRedacao = async (req, res) => {
   try {
