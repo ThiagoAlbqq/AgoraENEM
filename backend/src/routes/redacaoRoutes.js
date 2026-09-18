@@ -1,4 +1,3 @@
-import express from 'express';
 import {
   syncLegacyRedacoes,
   getRedacoes,
@@ -6,12 +5,15 @@ import {
   vincularAlunoRedacao,
   validarRedacao,
   deleteRedacao,
-  deleteAllRedacoes
+  deleteAllRedacoes,
+  exportDatabase
 } from '../controllers/redacaoController.js';
 import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/export-db', exportDatabase);
+router.get('/export', exportDatabase);
 router.post('/sync-legacy', authenticate, syncLegacyRedacoes);
 router.get('/', authenticate, getRedacoes);
 router.post('/', authenticate, createRedacao);

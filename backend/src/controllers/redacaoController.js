@@ -352,3 +352,40 @@ export const deleteRedacao = (req, res) => {
   }
 };
 
+// GET /api/export-db or /api/redacoes/export-db
+// Exports full SQLite DB (users + redacoes) as JSON backup download
+export const exportDatabase = (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, nome, email, senha_hash, role, turma, created_at FROM users').all();
+    const redacoes = db.prepare('SELECT * FROM redacoes').all();
+
+    const formattedRedacoes = redacoes.map(r => {
+      let ext = r.extracted_data;
+      if (typeof ext === 'string') {
+        try { ext = JSON.parse(ext); } catch(e) {}
+      }
+      return {
+        ...r,
+        extracted_data: ext
+      };
+    });
+
+    const backup = {
+      exported_at: new Date().toISOString(),
+      counts: {
+        users: users.length,
+        redacoes: formattedRedacoes.length
+      },
+      users,
+      redacoes: formattedRedacoes
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="agora-db-backup.json"');
+    return res.status(200).send(JSON.stringify(backup, null, 2));
+  } catch (error) {
+    console.error('[Export DB Error]:', error);
+    return res.status(500).json({ error: 'Falha ao exportar banco de dados.', details: error.message });
+  }
+};
+
