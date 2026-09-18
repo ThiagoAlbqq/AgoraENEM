@@ -428,8 +428,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   </button>
                 )}
               </form>
-
-            {/* Bottom Row: Metadata Chips + Score Badge */}
+            </div>
+          )}
             <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-mono text-[#807d72]">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-[#ffffff] px-2 py-0.5 rounded border border-[#e6e5e0]">ID #{String(redacao.id).padStart(4, '0')}</span>

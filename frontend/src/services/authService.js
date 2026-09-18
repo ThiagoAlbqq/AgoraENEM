@@ -97,7 +97,6 @@ export const authService = {
     let totalSkipped = 0;
     const total = localRedacoes.length;
 
-<<<<<<< HEAD
     // Sincroniza item a item para evitar estourar o limite de 4.5MB de payload por requisição da Vercel (FUNCTION_PAYLOAD_TOO_LARGE)
     for (let i = 0; i < total; i++) {
       const item = localRedacoes[i];
