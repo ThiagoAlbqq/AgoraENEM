@@ -12,11 +12,19 @@ import { db, deleteRedacao } from './db/db';
 import { syncOfflineDocuments } from './services/syncService';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authService } from './services/authService';
-import { X } from 'lucide-react';
+import { X, Award, Loader2 } from 'lucide-react';
 
 function AppContent() {
-  const { user, isAuthenticated, isAdmin, isEstudante } = useAuth();
-  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'novo' | 'tabela' | 'sem_nome' | 'config'
+  const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
+  
+  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #novo, #config)
+  const getInitialView = () => {
+    const hash = window.location.hash.replace('#', '');
+    const validViews = ['dashboard', 'novo', 'tabela', 'sem_nome', 'config'];
+    return validViews.includes(hash) ? hash : 'dashboard';
+  };
+
+  const [activeView, setActiveView] = useState(getInitialView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -27,6 +35,23 @@ function AppContent() {
   const [selectedRedacao, setSelectedRedacao] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState('todas');
+
+  const handleSetActiveView = (view) => {
+    setActiveView(view);
+    window.location.hash = `#${view}`;
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      const validViews = ['dashboard', 'novo', 'tabela', 'sem_nome', 'config'];
+      if (validViews.includes(hash)) {
+        setActiveView(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const loadRedacoes = async () => {
     setIsLoadingRedacoes(true);
@@ -136,7 +161,7 @@ function AppContent() {
         <Sidebar
           activeView={activeView}
           setActiveView={(view) => {
-            setActiveView(view);
+            handleSetActiveView(view);
             setIsMobileMenuOpen(false);
             if (view === 'sem_nome') setFilterTab('sem_nome');
             else if (view === 'tabela') setFilterTab('todas');
@@ -189,7 +214,18 @@ function AppContent() {
         {/* Page Content Body */}
         <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
           
-          {!isAuthenticated ? (
+          {authLoading ? (
+            <div className="h-full flex flex-col items-center justify-center text-[#26251e] space-y-3 animate-fadeIn">
+              <div className="bg-[#f54e00] p-3.5 rounded-2xl text-white shadow-md">
+                <Award className="w-7 h-7" />
+              </div>
+              <div className="font-semibold text-sm tracking-tight text-[#26251e]">Ágora ENEM</div>
+              <div className="text-xs text-[#807d72] font-mono flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f54e00]" />
+                Carregando ambiente...
+              </div>
+            </div>
+          ) : !isAuthenticated ? (
             <ProjetoAgoraLandingView onOpenLoginModal={() => setIsLoginModalOpen(true)} />
           ) : (
             <>
@@ -198,7 +234,7 @@ function AppContent() {
                   redacoes={redacoes}
                   isLoading={isLoadingRedacoes}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
-                  onNavigateToUpload={() => setActiveView('novo')}
+                  onNavigateToUpload={() => handleSetActiveView('novo')}
                 />
               )}
 
