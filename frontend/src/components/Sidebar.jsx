@@ -13,7 +13,8 @@ import {
   Wifi, 
   WifiOff, 
   Shield,
-  Download
+  Download,
+  Trophy
 } from 'lucide-react';
 import { db } from '../db/db';
 import { useAuth } from '../context/AuthContext';
@@ -76,7 +77,8 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     {
       title: 'Geral',
       items: [
-        { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard }
+        { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard },
+        { id: 'ranking', label: 'Ranking Oficial de Notas', icon: Trophy }
       ]
     },
     {
@@ -97,7 +99,8 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     {
       title: 'Geral',
       items: [
-        { id: 'dashboard', label: 'Minhas Notas & Desempenho', icon: LayoutDashboard }
+        { id: 'dashboard', label: 'Minhas Notas & Desempenho', icon: LayoutDashboard },
+        { id: 'ranking', label: 'Ranking & Classificação', icon: Trophy }
       ]
     },
     {

@@ -5,6 +5,7 @@ import DashboardView from './components/DashboardView';
 import UploaderView from './components/UploaderView';
 import RedacoesTableView from './components/RedacoesTableView';
 import ConfigView from './components/ConfigView';
+import RankingView from './components/RankingView';
 import ModalDetalhesRedacao from './components/ModalDetalhesRedacao';
 import LoginView from './components/LoginView';
 import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
@@ -17,10 +18,10 @@ import { X, Award, Loader2 } from 'lucide-react';
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
   
-  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #novo, #config)
+  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #ranking, #novo, #config)
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
-    const validViews = ['dashboard', 'novo', 'tabela', 'sem_nome', 'config'];
+    const validViews = ['dashboard', 'ranking', 'novo', 'tabela', 'sem_nome', 'config'];
     return validViews.includes(hash) ? hash : 'dashboard';
   };
 
@@ -44,7 +45,7 @@ function AppContent() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      const validViews = ['dashboard', 'novo', 'tabela', 'sem_nome', 'config'];
+      const validViews = ['dashboard', 'ranking', 'novo', 'tabela', 'sem_nome', 'config'];
       if (validViews.includes(hash)) {
         setActiveView(hash);
       }
@@ -248,6 +249,14 @@ function AppContent() {
                   isLoading={isLoadingRedacoes}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onNavigateToUpload={() => handleSetActiveView('novo')}
+                  onNavigateToRanking={() => handleSetActiveView('ranking')}
+                />
+              )}
+
+              {activeView === 'ranking' && (
+                <RankingView
+                  redacoes={redacoes}
+                  onSelectRedacao={(r) => setSelectedRedacao(r)}
                 />
               )}
 

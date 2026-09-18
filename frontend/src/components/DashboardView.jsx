@@ -1,12 +1,14 @@
-import React from 'react';
-import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3, Trophy, Crown, Medal, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload }) {
+export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking }) {
   const { user, isAdmin } = useAuth();
 
   const totalCount = redacoes.length;
-  const correctedList = redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
+  const correctedList = useMemo(() => {
+    return redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
+  }, [redacoes]);
   
   const avgScore = correctedList.length > 0
     ? Math.round(correctedList.reduce((acc, r) => acc + (r.nota_final || 0), 0) / correctedList.length)
@@ -41,6 +43,32 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
     { code: 'C5', label: 'Intervenção', avg: calcCompAvg('competencia_5'), color: '#c08532' }
   ];
 
+  // Top 3 Ranking Preview
+  const topRanking = useMemo(() => {
+    const map = new Map();
+    correctedList.forEach(r => {
+      const nome = (r.nome_aluno || r.extracted_data?.aluno || 'Estudante').trim();
+      const turma = (r.turma_aluno || r.extracted_data?.turma || 'Geral').trim();
+      const nota = Number(r.nota_final || 0);
+      const key = `${nome.toLowerCase()}_${turma.toLowerCase()}`;
+
+      if (!map.has(key)) {
+        map.set(key, { nome, turma, maxNota: nota, redacao: r });
+      } else {
+        const item = map.get(key);
+        if (nota > item.maxNota) {
+          item.maxNota = nota;
+          item.redacao = r;
+        }
+      }
+    });
+
+    return Array.from(map.values())
+      .sort((a, b) => b.maxNota - a.maxNota)
+      .slice(0, 3)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+  }, [correctedList]);
+
   return (
     <div className="space-y-5">
       
@@ -58,19 +86,33 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
             <p className="text-xs text-[#807d72] max-w-xl leading-relaxed">
               {isAdmin
                 ? 'Análise textual cruzada baseada na Matriz do ENEM (0-1000) e Rubricas Qualitativas Sisedu.'
-                : 'Acompanhe o desempenho detalhado e a nota das suas redações validadas.'}
+                : 'Acompanhe o desempenho detalhado, ranking da turma e as notas das suas redações.'}
             </p>
           </div>
 
-          {isAdmin && (
-            <button
-              onClick={onNavigateToUpload}
-              className="w-full sm:w-auto px-4 py-2.5 border border-[#dfa88f] bg-[#dfa88f]/20 hover:bg-[#dfa88f]/40 text-[#f54e00] font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs shrink-0"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Nova Correção em Lote</span>
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onNavigateToRanking && (
+              <button
+                type="button"
+                onClick={onNavigateToRanking}
+                className="w-full sm:w-auto px-4 py-2.5 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              >
+                <Trophy className="w-4 h-4 text-amber-600" />
+                <span>Ver Ranking Geral 🏆</span>
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onNavigateToUpload}
+                className="w-full sm:w-auto px-4 py-2.5 border border-[#dfa88f] bg-[#dfa88f]/20 hover:bg-[#dfa88f]/40 text-[#f54e00] font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Nova Correção em Lote</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -181,6 +223,66 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
         </div>
       )}
 
+      {/* TOP 3 RANKING PODIUM PREVIEW (NOVO!) */}
+      {topRanking.length > 0 && (
+        <div className="bg-[#ffffff] border border-amber-300/80 rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight">
+                Top Melhores Notas da Escola
+              </h3>
+            </div>
+            {onNavigateToRanking && (
+              <button
+                type="button"
+                onClick={onNavigateToRanking}
+                className="text-xs font-medium text-[#f54e00] hover:text-[#d04200] flex items-center gap-1 cursor-pointer font-mono"
+              >
+                <span>Ver Ranking Completo</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {topRanking.map((item) => {
+              const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : '🥉';
+              const borderCol = item.rank === 1 ? 'border-amber-300 bg-amber-50/40' : item.rank === 2 ? 'border-slate-200 bg-slate-50/40' : 'border-amber-700/20 bg-amber-50/20';
+
+              return (
+                <div
+                  key={item.rank}
+                  onClick={() => onSelectRedacao(item.redacao)}
+                  className={`p-3 rounded-lg border ${borderCol} flex items-center justify-between hover:shadow-xs transition-all cursor-pointer group`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-2xl shrink-0">{medal}</span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#26251e] truncate group-hover:text-[#f54e00] transition-colors">
+                        {item.nome}
+                      </div>
+                      <div className="text-[10px] font-mono text-[#807d72] truncate">
+                        {item.turma}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-black font-mono text-[#f54e00] block">
+                      {item.maxNota} pts
+                    </span>
+                    <span className="text-[9px] text-[#807d72] font-mono uppercase">
+                      {item.rank}º Lugar
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ENEM Competencies Average Chart */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl space-y-4 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
@@ -267,4 +369,3 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
     </div>
   );
 }
-
