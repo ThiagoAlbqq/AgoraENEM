@@ -80,6 +80,15 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const devolutivaInicial = data.devolutiva_nivel_inicial || avaliacoes.devolutiva_nivel_inicial || sisedu.devolutiva_nivel_inicial;
   const isIdentified = redacao.nome_detectado && redacao.nome_aluno;
 
+  // Cálculo matemático consistente da soma das 5 competências do ENEM
+  const c1Val = Number(enem.competencia_1?.nota ?? 0);
+  const c2Val = Number(enem.competencia_2?.nota ?? 0);
+  const c3Val = Number(enem.competencia_3?.nota ?? 0);
+  const c4Val = Number(enem.competencia_4?.nota ?? 0);
+  const c5Val = Number(enem.competencia_5?.nota ?? 0);
+  const sumCompetencias = c1Val + c2Val + c3Val + c4Val + c5Val;
+  const notaEnemCalculada = (enem.competencia_1 || enem.competencia_2) ? sumCompetencias : (enem.nota_total_enem ?? redacao.nota_final ?? 0);
+
   const fullTextContent = redacao.texto_digitado || data.texto_transcrito || 'Transcrição indisponível.';
 
   const handleCopyText = () => {
@@ -223,7 +232,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
     const studentNameDisplay = sanitizePdfText(redacao.nome_aluno || data.aluno || 'Estudante Não Identificado');
     const turmaDisplay = sanitizePdfText(redacao.turma_aluno || data.turma || 'Geral');
-    const notaTotal = enem.nota_total_enem !== undefined ? Number(enem.nota_total_enem) : 0;
+    const notaTotal = Number(notaEnemCalculada);
     const scoreGaugePct = Math.min(100, Math.max(0, (notaTotal / 1000) * 100));
 
     const sansFont = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -731,10 +740,10 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 <span>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</span>
               </div>
 
-              {enem.nota_total_enem !== undefined && (
+              {notaEnemCalculada !== undefined && (
                 <div className="px-2.5 py-0.5 rounded border border-[#dfa88f] bg-[#dfa88f]/20 font-mono text-xs flex items-baseline gap-1 shrink-0">
                   <span className="text-[10px] font-bold text-[#807d72]">NOTA ENEM:</span>
-                  <span className="text-sm font-bold text-[#f54e00]">{enem.nota_total_enem}</span>
+                  <span className="text-sm font-bold text-[#f54e00]">{notaEnemCalculada}</span>
                   <span className="text-[10px] text-[#807d72]">/1000</span>
                 </div>
               )}

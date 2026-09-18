@@ -114,8 +114,17 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
         ) : (
           filteredRedacoes.map((item) => {
             const isIdentified = item.nome_detectado && item.nome_aluno;
-            const ext = item.extracted_data || {};
-            const enemScore = ext.avaliacoes?.enem?.nota_total_enem ?? item.nota_final;
+            let ext = item.extracted_data || {};
+            if (typeof ext === 'string') {
+              try { ext = JSON.parse(ext); } catch(e) { ext = {}; }
+            }
+            const enemObj = ext.avaliacoes?.enem || {};
+            const cSum = (Number(enemObj.competencia_1?.nota || 0) +
+                          Number(enemObj.competencia_2?.nota || 0) +
+                          Number(enemObj.competencia_3?.nota || 0) +
+                          Number(enemObj.competencia_4?.nota || 0) +
+                          Number(enemObj.competencia_5?.nota || 0));
+            const enemScore = (enemObj.competencia_1 || enemObj.competencia_2) ? cSum : (enemObj.nota_total_enem ?? item.nota_final ?? 0);
 
             return (
               <div

@@ -145,6 +145,20 @@ ${textoDigitado ? `\nTEXTO DIGITADO:\n"""\n${textoDigitado}\n"""` : ''}`;
   console.log(`[Agente Único IA] Transcrição OCR e Avaliação pedagógica concluídas com sucesso.`);
   const parsed = cleanAndParseJSON(responseText);
 
+  // Recalcula rigorosamente a soma real das 5 competências do ENEM (C1 + C2 + C3 + C4 + C5)
+  if (parsed.avaliacoes?.enem) {
+    const enem = parsed.avaliacoes.enem;
+    const c1 = Number(enem.competencia_1?.nota ?? 0);
+    const c2 = Number(enem.competencia_2?.nota ?? 0);
+    const c3 = Number(enem.competencia_3?.nota ?? 0);
+    const c4 = Number(enem.competencia_4?.nota ?? 0);
+    const c5 = Number(enem.competencia_5?.nota ?? 0);
+    const totalEnem = Math.min(1000, Math.max(0, c1 + c2 + c3 + c4 + c5));
+    
+    enem.nota_total_enem = totalEnem;
+    parsed.nota_final = totalEnem;
+  }
+
   if (nomeFornecido) parsed.aluno = nomeFornecido;
   if (turmaFornecida) parsed.turma = turmaFornecida;
   if (textoDigitado && (!parsed.texto_transcrito || parsed.texto_transcrito.length < textoDigitado.length)) {
