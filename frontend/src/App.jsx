@@ -53,8 +53,8 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const loadRedacoes = async () => {
-    setIsLoadingRedacoes(true);
+  const loadRedacoes = async (silent = false) => {
+    if (!silent) setIsLoadingRedacoes(true);
     try {
       let cloudDocs = [];
       const fetched = await authService.fetchCloudRedacoes();
@@ -91,7 +91,7 @@ function AppContent() {
       const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
       setRedacoes(localDocs);
     } finally {
-      setIsLoadingRedacoes(false);
+      if (!silent) setIsLoadingRedacoes(false);
     }
   };
 
@@ -115,7 +115,7 @@ function AppContent() {
     setIsSyncing(true);
     try {
       const res = await syncOfflineDocuments();
-      loadRedacoes();
+      loadRedacoes(true);
       if (res && res.message) {
         showToast(res.message, res.errorCount > 0 ? 'warning' : 'success');
       } else {
@@ -131,15 +131,25 @@ function AppContent() {
 
   const handleDeleteRedacao = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta redação?')) {
+      // 1. Atualização Otimista Imediata (0ms): Remove o card na hora sem sumir com os outros
+      const previousRedacoes = [...redacoes];
+      setRedacoes(prev => prev.filter(r => String(r.id) !== String(id) && String(r.cloud_id) !== String(id)));
+      showToast('Redação excluída com sucesso!', 'success');
+
       try {
-        await deleteRedacao(id).catch(() => {});
-        await authService.deleteCloudRedacao(id).catch(err => {
-          console.warn('Aviso ao excluir na nuvem:', err.message);
-        });
-        showToast('Redação excluída com sucesso!', 'success');
-        await loadRedacoes();
+        // 2. Exclui no IndexedDB local e no Supabase (em background)
+        await Promise.all([
+          deleteRedacao(id).catch(() => {}),
+          authService.deleteCloudRedacao(id).catch(err => {
+            console.warn('Aviso ao excluir na nuvem:', err.message);
+          })
+        ]);
+        // 3. Atualiza estado de fundo silenciosamente (sem travar nem piscar os cards)
+        await loadRedacoes(true);
       } catch (error) {
         console.error('Erro ao excluir redação:', error);
+        // Em caso de erro, reverte a exclusão na tela
+        setRedacoes(previousRedacoes);
         showToast(`Erro ao excluir: ${error.message}`, 'error');
       }
     }
