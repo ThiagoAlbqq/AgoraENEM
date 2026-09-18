@@ -119,14 +119,19 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     if (!manualName.trim()) return;
     setIsSavingName(true);
     try {
-      await updateNomeAluno(redacao.id, manualName.trim(), manualTurma.trim() || null);
+      // 1. Atualiza no servidor (Supabase Cloud)
       if (authService.getToken()) {
-        await authService.syncLegacyToCloud().catch(() => {});
+        await authService.vincularAluno(redacao.id, {
+          nome_aluno: manualName.trim(),
+          turma_aluno: manualTurma.trim() || null
+        }).catch(err => console.warn('Aviso ao sincronizar na nuvem:', err));
       }
+      // 2. Atualiza no IndexedDB local se existir
+      await updateNomeAluno(redacao.id, manualName.trim(), manualTurma.trim() || null);
       if (onUpdated) onUpdated();
       setIsEditingName(false);
     } catch (err) {
-      console.error(err);
+      console.error('Erro ao salvar nome:', err);
     } finally {
       setIsSavingName(false);
     }

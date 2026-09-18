@@ -64,24 +64,23 @@ export async function saveMultipleRedacoesOffline(items) {
 export async function updateNomeAluno(id, novoNome, novaTurma = null) {
   try {
     const redacao = await db.redacoes.get(id);
-    if (!redacao) throw new Error('Redação não encontrada.');
+    if (redacao) {
+      const updatedExtracted = redacao.extracted_data ? {
+        ...redacao.extracted_data,
+        aluno: novoNome,
+        turma: novaTurma || redacao.extracted_data.turma
+      } : null;
 
-    const updatedExtracted = redacao.extracted_data ? {
-      ...redacao.extracted_data,
-      aluno: novoNome,
-      turma: novaTurma || redacao.extracted_data.turma
-    } : null;
-
-    await db.redacoes.update(id, {
-      nome_aluno: novoNome,
-      turma_aluno: novaTurma || redacao.turma_aluno,
-      nome_detectado: true,
-      extracted_data: updatedExtracted
-    });
-    console.log(`[IndexedDB] Nome do aluno atualizado para ID ${id}: ${novoNome}`);
+      await db.redacoes.update(id, {
+        nome_aluno: novoNome,
+        turma_aluno: novaTurma || redacao.turma_aluno,
+        nome_detectado: true,
+        extracted_data: updatedExtracted
+      });
+      console.log(`[IndexedDB] Nome do aluno atualizado para ID ${id}: ${novoNome}`);
+    }
   } catch (error) {
-    console.error('[IndexedDB] Erro ao atualizar nome do aluno:', error);
-    throw error;
+    console.warn('[IndexedDB] Aviso ao atualizar nome no IndexedDB:', error);
   }
 }
 

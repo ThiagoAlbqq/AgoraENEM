@@ -5,8 +5,11 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.POSTGRES_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+const DEFAULT_SUPABASE_URL = 'https://lwffpyzfoyuubjeoueyy.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_fRzL_n1v5VfeuyN4RRbJ_g_jRGSIwTM';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_KEY;
 
 export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY);
 
