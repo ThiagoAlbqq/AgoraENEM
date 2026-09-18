@@ -56,46 +56,43 @@ function AppContent() {
   const loadRedacoes = async () => {
     setIsLoadingRedacoes(true);
     try {
+      let cloudDocs = [];
       if (isAuthenticated) {
-        // Fetch from central database (Supabase / SQLite)
-        const cloudDocs = await authService.fetchCloudRedacoes();
-        if (cloudDocs && Array.isArray(cloudDocs)) {
-          // Student accounts must strictly use cloudDocs (even if empty [])
-          if (!isAdmin) {
-            setRedacoes(cloudDocs);
-            return;
-          }
-          // Admin account uses cloudDocs if available
-          if (cloudDocs.length > 0) {
-            setRedacoes(cloudDocs);
-            return;
-          }
+        const fetched = await authService.fetchCloudRedacoes();
+        if (Array.isArray(fetched)) cloudDocs = fetched;
+      }
+
+      const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+
+      // Combine cloudDocs and localDocs seamlessly (avoiding duplicates)
+      const combined = [...cloudDocs];
+      for (const local of localDocs) {
+        const isAlreadyInCloud = cloudDocs.some(c =>
+          String(c.id) === String(local.id) ||
+          (c.nome_aluno === local.nome_aluno && c.data_captura === local.data_captura)
+        );
+        if (!isAlreadyInCloud) {
+          combined.unshift(local);
         }
       }
-      
-      // Fallback or offline IndexedDB load
-      const allDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+
       if (!isAdmin && user) {
-        // Strict filtering for student accounts on IndexedDB fallback
         const cleanName = (user.nome || '').toLowerCase().trim();
-        const studentDocs = allDocs.filter(r => 
+        const studentDocs = combined.filter(r =>
           (r.user_id && Number(r.user_id) === Number(user.id)) ||
-          (cleanName && r.nome_aluno && r.nome_aluno.toLowerCase().trim() === cleanName)
+          (cleanName && r.nome_aluno && r.nome_aluno.toLowerCase().trim() === cleanName) ||
+          (!r.is_synced)
         );
         setRedacoes(studentDocs);
       } else if (!isAdmin && !user) {
         setRedacoes([]);
       } else {
-        setRedacoes(allDocs);
+        setRedacoes(combined);
       }
     } catch (error) {
       console.error('Falha ao carregar redações:', error);
-      if (!isAdmin) {
-        setRedacoes([]);
-      } else {
-        const allDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-        setRedacoes(allDocs);
-      }
+      const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
+      setRedacoes(localDocs);
     } finally {
       setIsLoadingRedacoes(false);
     }

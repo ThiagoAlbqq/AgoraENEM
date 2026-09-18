@@ -19,6 +19,20 @@ export const syncLegacyRedacoes = async (req, res) => {
         const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
 
         // Check if existing by student name and capture date
+        const extractedDataObj = typeof item.extracted_data === 'string'
+          ? (JSON.parse(item.extracted_data || '{}'))
+          : (item.extracted_data || item.resultado || {});
+
+        const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.avaliacoes?.enem?.nota_total_enem) || 0;
+        const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
+        const textoDigitado = item.texto_digitado || item.textoDigitado || null;
+        const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
+        const turmaAluno = item.turma_aluno || item.turmaAluno || 'Turma Geral';
+        const nomeDetectado = item.nome_detectado ? 1 : 0;
+        const statusValidacao = item.status_validacao || 'VALIDADA';
+        const validadoPor = req.user?.id || null;
+        const dataValidacao = new Date().toISOString();
+
         const { data: existing } = await supabase
           .from('redacoes')
           .select('id')
@@ -27,7 +41,15 @@ export const syncLegacyRedacoes = async (req, res) => {
           .maybeSingle();
 
         if (existing) {
-          skippedCount++;
+          await supabase.from('redacoes').update({
+            extracted_data: extractedDataObj,
+            nota_final: notaFinal,
+            status_validacao: statusValidacao,
+            imagem_base64: imagemBase64,
+            texto_digitado: textoDigitado,
+            is_synced: 1
+          }).eq('id', existing.id);
+          insertedCount++;
           continue;
         }
 
