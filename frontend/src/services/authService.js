@@ -145,10 +145,14 @@ export const authService = {
 
   async fetchCloudRedacoes() {
     const token = this.getToken();
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers = {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
 
     try {
-      const response = await fetch(`${API_BASE}/redacoes`, { headers });
+      const response = await fetch(`${API_BASE}/redacoes?_t=${Date.now()}`, { headers });
       if (!response.ok) return null;
       const data = await response.json();
       return data.redacoes || [];
