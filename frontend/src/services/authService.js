@@ -83,7 +83,7 @@ export const authService = {
     return data.estudantes || [];
   },
 
-  async syncLegacyToCloud() {
+  async syncLegacyToCloud(onProgress) {
     const token = this.getToken();
     if (!token) throw new Error('É necessário estar autenticado como Admin para subir as correções.');
 
@@ -93,21 +93,47 @@ export const authService = {
       return { insertedCount: 0, message: 'Nenhuma correção local no IndexedDB encontrada.' };
     }
 
-    const response = await fetch(`${API_BASE}/redacoes/sync-legacy`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ redacoes: localRedacoes })
-    });
+    let totalInserted = 0;
+    let totalSkipped = 0;
+    const total = localRedacoes.length;
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'Erro ao sincronizar com a nuvem.');
+    // Sincroniza item a item para evitar estourar o limite de 4.5MB de payload por requisição da Vercel (FUNCTION_PAYLOAD_TOO_LARGE)
+    for (let i = 0; i < total; i++) {
+      const item = localRedacoes[i];
+      if (onProgress) {
+        onProgress(i + 1, total);
+      }
+
+      // Failsafe de payload: se a imagem base64 de um único item for absurdamente grande (>3.5MB), omite a imagem para não estourar o limite da Vercel
+      let itemToSend = item;
+      const jsonStr = JSON.stringify({ redacoes: [itemToSend] });
+      if (jsonStr.length > 3.5 * 1024 * 1024) {
+        itemToSend = { ...item, imagem_base64: null };
+      }
+
+      const response = await fetch(`${API_BASE}/redacoes/sync-legacy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ redacoes: [itemToSend] })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `Erro ao sincronizar a redação ${i + 1} de ${total}.`);
+      }
+
+      totalInserted += (data.insertedCount || 0);
+      totalSkipped += (data.skippedCount || 0);
     }
 
-    return data;
+    return {
+      insertedCount: totalInserted,
+      skippedCount: totalSkipped,
+      message: `${totalInserted} correções locais sincronizadas e disponibilizadas com sucesso! (${totalSkipped} já existiam)`
+    };
   },
 
   async fetchCloudRedacoes() {

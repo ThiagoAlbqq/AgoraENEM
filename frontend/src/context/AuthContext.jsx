@@ -58,8 +58,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const syncLegacyToCloud = async () => {
-    return await authService.syncLegacyToCloud();
+  const syncLegacyToCloud = async (onProgress) => {
+    return await authService.syncLegacyToCloud(onProgress);
   };
 
   const value = {

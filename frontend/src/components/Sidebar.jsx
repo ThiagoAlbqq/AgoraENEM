@@ -22,20 +22,25 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
   const isOnline = useNetworkStatus();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
+  const [syncProgress, setSyncProgress] = useState(null);
 
   if (!user) return null; // Completely hide sidebar when unauthenticated
 
   const handleCloudSync = async () => {
     setIsCloudSyncing(true);
     setSyncFeedback(null);
+    setSyncProgress(null);
     try {
-      const res = await syncLegacyToCloud();
+      const res = await syncLegacyToCloud((current, total) => {
+        setSyncProgress(`Subindo ${current}/${total}...`);
+      });
       setSyncFeedback(res.message);
       setTimeout(() => setSyncFeedback(null), 5000);
     } catch (err) {
       alert(err.message || 'Erro ao sincronizar com a nuvem.');
     } finally {
       setIsCloudSyncing(false);
+      setSyncProgress(null);
     }
   };
 
@@ -160,7 +165,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
             >
               <span className="flex items-center gap-2 truncate">
                 <CloudUpload className={`w-3.5 h-3.5 shrink-0 ${isCloudSyncing ? 'animate-bounce' : ''}`} />
-                <span className="truncate">Subir p/ Nuvem</span>
+                <span className="truncate">{syncProgress || 'Subir p/ Nuvem'}</span>
               </span>
             </button>
             {syncFeedback && (
