@@ -185,7 +185,7 @@ export const getRedacoes = async (req, res) => {
         .select('*')
         .order('data_captura', { ascending: false });
 
-      if (user.role !== 'ADMIN') {
+      if (user && user.role !== 'ADMIN') {
         const cleanStudentName = (user.nome || '').trim();
         query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
       }
@@ -214,9 +214,9 @@ export const getRedacoes = async (req, res) => {
       }
     }
 
-    if (formatted.length === 0 && !isSupabaseConfigured) {
+    if (formatted.length === 0 && !isSupabaseConfigured && db) {
       let rows;
-      if (user.role === 'ADMIN') {
+      if (!user || user.role === 'ADMIN') {
         rows = db.prepare(`
           SELECT r.*, u.email as user_email, v.nome as nome_validador
           FROM redacoes r

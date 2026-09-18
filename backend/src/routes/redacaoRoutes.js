@@ -9,14 +9,14 @@ import {
   deleteAllRedacoes,
   exportDatabase
 } from '../controllers/redacaoController.js';
-import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticate, requireAdmin, optionalAuthenticate } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.get('/export-db', exportDatabase);
 router.get('/export', exportDatabase);
 router.post('/sync-legacy', authenticate, syncLegacyRedacoes);
-router.get('/', authenticate, getRedacoes);
+router.get('/', optionalAuthenticate, getRedacoes);
 router.post('/', authenticate, createRedacao);
 router.patch('/:id/vincular', authenticate, requireAdmin, vincularAlunoRedacao);
 router.patch('/:id/validar', authenticate, requireAdmin, validarRedacao);

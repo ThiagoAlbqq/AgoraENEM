@@ -53,3 +53,44 @@ export const requireAdmin = (req, res, next) => {
   }
   next();
 };
+
+export const optionalAuthenticate = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    let user = null;
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nome, email, role, turma')
+        .eq('id', decoded.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        user = data;
+      }
+    }
+
+    if (!user && db) {
+      try {
+        user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
+      } catch (dbErr) {
+        console.warn('[DB Optional Authenticate Warning]:', dbErr.message);
+      }
+    }
+
+    if (user) {
+      req.user = user;
+    }
+  } catch (err) {
+    // Continua sem usuário logado se token for inválido
+  }
+  next();
+};
+

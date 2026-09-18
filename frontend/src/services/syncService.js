@@ -31,11 +31,15 @@ export async function syncOfflineDocuments() {
       const chunkDocs = chunks[c];
       console.log(`[SyncService] Sincronizando Lote ${c + 1}/${chunks.length} (${chunkDocs.length} redações)...`);
 
+      const token = authService.getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
       const response = await fetch(BACKEND_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ redacoes: chunkDocs }),
       });
 
@@ -74,7 +78,8 @@ export async function syncOfflineDocuments() {
             nome_aluno: finalStudentName,
             turma_aluno: finalTurma,
             nome_detectado: isNameDetected,
-            nota_final: notaTotalEnem
+            nota_final: notaTotalEnem,
+            cloud_id: item.cloud_id || item.supabase_id || null
           });
           successCount++;
         } else {
@@ -84,15 +89,8 @@ export async function syncOfflineDocuments() {
       }
     }
 
-    // Auto-lança as redações avaliadas diretamente para o banco SQLite na nuvem
-    if (successCount > 0 && authService.getToken()) {
-      try {
-        console.log('[SyncService] Auto-lançando correções no banco SQLite na nuvem...');
-        await authService.syncLegacyToCloud();
-      } catch (autoSyncErr) {
-        console.warn('[SyncService] AVISO: Auto-lançamento na nuvem falhou:', autoSyncErr.message);
-      }
-    }
+    // Como o backend (/api/corrigir) agora grava diretamente no Supabase em tempo real,
+    // as redações já estão salvas no banco central de forma instantânea e sem burocracia.
 
     return {
       successCount,

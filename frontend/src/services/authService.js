@@ -145,15 +145,17 @@ export const authService = {
 
   async fetchCloudRedacoes() {
     const token = this.getToken();
-    if (!token) return null;
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    const response = await fetch(`${API_BASE}/redacoes`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.redacoes || [];
+    try {
+      const response = await fetch(`${API_BASE}/redacoes`, { headers });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.redacoes || [];
+    } catch (err) {
+      console.warn('Erro ao buscar redações na nuvem:', err);
+      return null;
+    }
   },
 
   async validarRedacao(id, payload = {}) {

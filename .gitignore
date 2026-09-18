@@ -28,4 +28,5 @@ backend/data/
 !backend/package.json
 !package.json
 !vercel.json
+scratch/
 

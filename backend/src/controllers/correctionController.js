@@ -1,4 +1,8 @@
 import { agenteAvaliadorUnificado, getMockENEMEvaluation } from '../services/aiService.js';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
+import db from '../config/db.js';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../middleware/authMiddleware.js';
 
 export async function handleCorrection(req, res) {
   const { documents, redacoes } = req.body;
@@ -9,6 +13,21 @@ export async function handleCorrection(req, res) {
   }
 
   console.log(`[CorrectionController] Recebida solicitação em lote para avaliar ${itemsToProcess.length} redação(ões)...`);
+
+  // Extrai usuário autenticado do cabeçalho se fornecido
+  let requestingUser = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded && decoded.id) {
+        requestingUser = decoded;
+      }
+    } catch (e) {
+      // Token inválido ou expirado, continua normalmente
+    }
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   const results = [];
@@ -47,10 +66,118 @@ export async function handleCorrection(req, res) {
         extractedData.texto_transcrito = texto_digitado;
       }
 
+      // Consolidação dos dados finais avaliados
+      const finalStudentName = (nome_aluno && nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || 'Aluno Não Identificado';
+      const finalTurma = (turma_aluno && turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || 'Turma Geral';
+      const notaTotalEnem = extractedData.avaliacoes?.enem?.nota_total_enem ?? extractedData.nota_final ?? 0;
+      const isNameDetected = !!(finalStudentName && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(finalStudentName.trim()));
+      const dataCaptura = item.data_captura || new Date().toISOString();
+      const tipoInput = item.tipo_input || (imagem_base64 ? 'imagem' : 'texto');
+
+      let userId = item.user_id || null;
+      let validadoPor = requestingUser?.id || null;
+
+      // Se não tem user_id vinculado, procura automaticamente pelo nome do estudante no Supabase
+      if (!userId && isNameDetected && isSupabaseConfigured) {
+        try {
+          const { data: matchedUser } = await supabase
+            .from('users')
+            .select('id')
+            .ilike('nome', finalStudentName.trim())
+            .eq('role', 'ESTUDANTE')
+            .maybeSingle();
+
+          if (matchedUser) {
+            userId = matchedUser.id;
+          }
+        } catch (matchErr) {
+          console.warn('[CorrectionController] Match user warning:', matchErr.message);
+        }
+      }
+
+      // =========================================================================
+      // PERSISTÊNCIA DIRETA NO SUPABASE (NUVEM) - SEM BUROCRACIA DE SINCRONIZAÇÃO
+      // =========================================================================
+      let savedCloudId = null;
+      if (isSupabaseConfigured) {
+        try {
+          console.log(`[CorrectionController] Gravando redação diretamente no Supabase (${finalStudentName})...`);
+          const { data: insertedRow, error: insErr } = await supabase
+            .from('redacoes')
+            .insert({
+              user_id: userId,
+              nome_aluno: finalStudentName,
+              turma_aluno: finalTurma,
+              nome_detectado: isNameDetected ? 1 : 0,
+              data_captura: dataCaptura,
+              tipo_input: tipoInput,
+              imagem_base64: imagem_base64 || null,
+              texto_digitado: texto_digitado || null,
+              is_synced: 1,
+              extracted_data: extractedData,
+              nota_final: notaTotalEnem,
+              status_validacao: 'VALIDADA',
+              validado_por: validadoPor,
+              data_validacao: new Date().toISOString()
+            })
+            .select('id')
+            .maybeSingle();
+
+          if (insErr) {
+            console.error('[CorrectionController] Erro ao gravar no Supabase:', insErr.message);
+          } else if (insertedRow) {
+            savedCloudId = insertedRow.id;
+            console.log(`[CorrectionController] ✅ Redação salva no Supabase com ID ${savedCloudId}!`);
+          }
+        } catch (supabaseErr) {
+          console.error('[CorrectionController] Exceção de rede no Supabase:', supabaseErr.message);
+        }
+      }
+
+      // Persistência local no SQLite como redundância/cache
+      if (db) {
+        try {
+          const stmt = db.prepare(`
+            INSERT INTO redacoes (
+              user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
+              tipo_input, imagem_base64, texto_digitado, is_synced,
+              extracted_data, nota_final, status_validacao, validado_por, data_validacao
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'VALIDADA', ?, CURRENT_TIMESTAMP)
+          `);
+          const info = stmt.run(
+            userId,
+            finalStudentName,
+            finalTurma,
+            isNameDetected ? 1 : 0,
+            dataCaptura,
+            tipoInput,
+            imagem_base64 || null,
+            texto_digitado || null,
+            JSON.stringify(extractedData),
+            notaTotalEnem,
+            validadoPor
+          );
+          if (!savedCloudId) {
+            savedCloudId = info.lastInsertRowid;
+          }
+          console.log(`[CorrectionController] Gravado no SQLite com ID ${info.lastInsertRowid}`);
+        } catch (sqliteErr) {
+          console.warn('[CorrectionController] SQLite insert warning:', sqliteErr.message);
+        }
+      }
+
       results.push({
         id,
+        supabase_id: savedCloudId,
+        cloud_id: savedCloudId,
         status: 'success',
-        extracted: extractedData,
+        extracted: {
+          ...extractedData,
+          id: savedCloudId || id,
+          aluno: finalStudentName,
+          turma: finalTurma,
+          nota_final: notaTotalEnem
+        },
         processed_at: new Date().toISOString()
       });
 
@@ -67,10 +194,10 @@ export async function handleCorrection(req, res) {
     }
   }
 
-  console.log(`[CorrectionController] Concluída avaliação de ${results.length} redação(ões).`);
+  console.log(`[CorrectionController] Concluída avaliação e persistência de ${results.length} redação(ões).`);
 
   return res.status(200).json({
-    message: 'Redações avaliadas com sucesso.',
+    message: 'Redações avaliadas e gravadas no banco de dados com sucesso.',
     results
   });
 }

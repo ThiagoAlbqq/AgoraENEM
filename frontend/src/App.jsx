@@ -57,10 +57,8 @@ function AppContent() {
     setIsLoadingRedacoes(true);
     try {
       let cloudDocs = [];
-      if (isAuthenticated) {
-        const fetched = await authService.fetchCloudRedacoes();
-        if (Array.isArray(fetched)) cloudDocs = fetched;
-      }
+      const fetched = await authService.fetchCloudRedacoes();
+      if (Array.isArray(fetched)) cloudDocs = fetched;
 
       const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
 
@@ -69,14 +67,15 @@ function AppContent() {
       for (const local of localDocs) {
         const isAlreadyInCloud = cloudDocs.some(c =>
           String(c.id) === String(local.id) ||
-          (c.nome_aluno === local.nome_aluno && c.data_captura === local.data_captura)
+          String(c.id) === String(local.cloud_id) ||
+          (c.nome_aluno && local.nome_aluno && c.nome_aluno.trim().toLowerCase() === local.nome_aluno.trim().toLowerCase() && c.data_captura === local.data_captura)
         );
         if (!isAlreadyInCloud) {
           combined.unshift(local);
         }
       }
 
-      if (!isAdmin && user) {
+      if (!isAdmin && user && user.role === 'ESTUDANTE') {
         const cleanName = (user.nome || '').toLowerCase().trim();
         const studentDocs = combined.filter(r =>
           (r.user_id && Number(r.user_id) === Number(user.id)) ||
@@ -84,8 +83,6 @@ function AppContent() {
           (!r.is_synced)
         );
         setRedacoes(studentDocs);
-      } else if (!isAdmin && !user) {
-        setRedacoes([]);
       } else {
         setRedacoes(combined);
       }
