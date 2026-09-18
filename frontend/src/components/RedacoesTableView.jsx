@@ -1,30 +1,48 @@
-import React from 'react';
-import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock, Filter, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function RedacoesTableView({ redacoes, isLoading = false, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
   const { isAdmin, isEstudante } = useAuth();
+  const [selectedTurma, setSelectedTurma] = useState('todas');
 
-  const filteredRedacoes = redacoes.filter((item) => {
-    const ext = item.extracted_data || {};
-    const aluno = item.nome_aluno || ext.aluno || '';
-    const turma = item.turma_aluno || ext.turma || '';
-    const idStr = String(item.id);
+  // Lista única de turmas presentes nas redações
+  const turmasList = useMemo(() => {
+    const set = new Set();
+    redacoes.forEach(r => {
+      const t = r.turma_aluno || r.extracted_data?.turma;
+      if (t && t.trim()) set.add(t.trim());
+    });
+    return Array.from(set).sort();
+  }, [redacoes]);
 
-    const matchesSearch = !searchQuery.trim() ||
-      aluno.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      turma.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      idStr.includes(searchQuery);
+  const filteredRedacoes = useMemo(() => {
+    return redacoes.filter((item) => {
+      const ext = item.extracted_data || {};
+      const aluno = item.nome_aluno || ext.aluno || '';
+      const turma = item.turma_aluno || ext.turma || '';
+      const idStr = String(item.id);
 
-    if (!matchesSearch) return false;
+      // Filtro por turma
+      if (selectedTurma !== 'todas' && turma.toLowerCase() !== selectedTurma.toLowerCase()) {
+        return false;
+      }
 
-    if (filterTab === 'identificadas') return item.nome_detectado && item.nome_aluno;
-    if (filterTab === 'sem_nome') return !item.nome_detectado || !item.nome_aluno;
-    if (filterTab === 'excelentes') return item.nota_final >= 800;
-    if (filterTab === 'baixas') return item.is_synced && item.nota_final < 600;
+      const matchesSearch = !searchQuery.trim() ||
+        aluno.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        turma.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        idStr.includes(searchQuery);
 
-    return true;
-  });
+      if (!matchesSearch) return false;
+
+      if (filterTab === 'identificadas') return item.nome_detectado && item.nome_aluno;
+      if (filterTab === 'sem_nome') return !item.nome_detectado || !item.nome_aluno;
+      if (filterTab === 'excelentes') return item.nota_final >= 800;
+      if (filterTab === 'baixas') return item.is_synced && item.nota_final < 600;
+
+      return true;
+    });
+  }, [redacoes, selectedTurma, searchQuery, filterTab]);
 
   return (
     <div className="space-y-4">
@@ -42,51 +60,80 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
           </p>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
-          <button
-            onClick={() => setFilterTab('todas')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'todas'
-                ? 'bg-[#26251e] text-white border-[#26251e]'
-                : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-              }`}
-          >
-            Todas ({redacoes.length})
-          </button>
-
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setFilterTab('identificadas')}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'identificadas'
-                    ? 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]'
-                    : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-                  }`}
+        {/* Filter Controls: Turma Dropdown & Status Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Turma Dropdown */}
+          {turmasList.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-[#fafaf7] border border-[#e6e5e0] px-2.5 py-1.5 rounded-lg text-xs">
+              <Filter className="w-3.5 h-3.5 text-[#807d72]" />
+              <select
+                value={selectedTurma}
+                onChange={(e) => setSelectedTurma(e.target.value)}
+                className="bg-transparent border-none text-xs text-[#26251e] font-medium focus:outline-none cursor-pointer"
               >
-                Com Nome
-              </button>
-              <button
-                onClick={() => setFilterTab('sem_nome')}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${filterTab === 'sem_nome'
-                    ? 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]'
-                    : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-                  }`}
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-[#26251e]" />
-                Sem Nome Guardadas
-              </button>
-            </>
+                <option value="todas">Todas as Turmas ({turmasList.length})</option>
+                {turmasList.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              {selectedTurma !== 'todas' && (
+                <button
+                  onClick={() => setSelectedTurma('todas')}
+                  className="p-0.5 hover:bg-[#e6e5e0] rounded text-[#807d72] hover:text-[#26251e] cursor-pointer ml-1"
+                  title="Limpar filtro de turma"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           )}
 
-          <button
-            onClick={() => setFilterTab('excelentes')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'excelentes'
-                ? 'bg-[#c08532] text-white border-[#c08532]'
-                : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
-              }`}
-          >
-            Notas ≥ 800
-          </button>
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+            <button
+              onClick={() => setFilterTab('todas')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'todas'
+                  ? 'bg-[#26251e] text-white border-[#26251e]'
+                  : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                }`}
+            >
+              Todas ({redacoes.length})
+            </button>
+
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setFilterTab('identificadas')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'identificadas'
+                      ? 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]'
+                      : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                    }`}
+                >
+                  Com Nome
+                </button>
+                <button
+                  onClick={() => setFilterTab('sem_nome')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${filterTab === 'sem_nome'
+                      ? 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]'
+                      : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                    }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#26251e]" />
+                  Sem Nome
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setFilterTab('excelentes')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'excelentes'
+                  ? 'bg-[#c08532] text-white border-[#c08532]'
+                  : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
+                }`}
+            >
+              Notas ≥ 800
+            </button>
+          </div>
         </div>
       </div>
 

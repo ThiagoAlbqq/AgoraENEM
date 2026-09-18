@@ -39,6 +39,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [isLinkingStudent, setIsLinkingStudent] = useState(false);
   const [isStudentPickerOpen, setIsStudentPickerOpen] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [studentTurmaFilter, setStudentTurmaFilter] = useState('todas');
 
   React.useEffect(() => {
     if (isAdmin) {
@@ -999,16 +1000,32 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Pesquisar por nome, e-mail ou turma..."
-                value={studentSearchQuery}
-                onChange={(e) => setStudentSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
-              />
+            {/* Search & Turma Filter Controls */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar por nome ou e-mail..."
+                  value={studentSearchQuery}
+                  onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+                />
+              </div>
+
+              {/* Turma Filter Select */}
+              <div className="sm:w-44 shrink-0">
+                <select
+                  value={studentTurmaFilter}
+                  onChange={(e) => setStudentTurmaFilter(e.target.value)}
+                  className="w-full py-2 px-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] focus:outline-none focus:border-[#26251e] cursor-pointer"
+                >
+                  <option value="todas">Todas as Salas</option>
+                  {Array.from(new Set(estudantesList.map(e => e.turma).filter(Boolean))).sort().map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Options List */}
@@ -1035,6 +1052,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
               {(() => {
                 const filteredEstudantes = estudantesList.filter(est => {
+                  if (studentTurmaFilter !== 'todas' && (est.turma || '').toLowerCase() !== studentTurmaFilter.toLowerCase()) {
+                    return false;
+                  }
                   const query = studentSearchQuery.toLowerCase().trim();
                   if (!query) return true;
                   return (
