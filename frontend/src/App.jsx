@@ -21,6 +21,7 @@ function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [redacoes, setRedacoes] = useState([]);
+  const [isLoadingRedacoes, setIsLoadingRedacoes] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedRedacao, setSelectedRedacao] = useState(null);
@@ -28,9 +29,10 @@ function AppContent() {
   const [filterTab, setFilterTab] = useState('todas');
 
   const loadRedacoes = async () => {
+    setIsLoadingRedacoes(true);
     try {
       if (isAuthenticated) {
-        // Fetch from central SQLite database
+        // Fetch from central database (Supabase / SQLite)
         const cloudDocs = await authService.fetchCloudRedacoes();
         if (cloudDocs && Array.isArray(cloudDocs)) {
           // Student accounts must strictly use cloudDocs (even if empty [])
@@ -69,6 +71,8 @@ function AppContent() {
         const allDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
         setRedacoes(allDocs);
       }
+    } finally {
+      setIsLoadingRedacoes(false);
     }
   };
 
@@ -192,6 +196,7 @@ function AppContent() {
               {activeView === 'dashboard' && (
                 <DashboardView
                   redacoes={redacoes}
+                  isLoading={isLoadingRedacoes}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onNavigateToUpload={() => setActiveView('novo')}
                 />
@@ -204,6 +209,7 @@ function AppContent() {
               {(activeView === 'tabela' || activeView === 'sem_nome') && (
                 <RedacoesTableView
                   redacoes={redacoes}
+                  isLoading={isLoadingRedacoes}
                   filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
                   setFilterTab={setFilterTab}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}

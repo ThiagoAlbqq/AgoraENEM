@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
+export default function RedacoesTableView({ redacoes, isLoading = false, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
   const { isAdmin, isEstudante } = useAuth();
 
   const filteredRedacoes = redacoes.filter((item) => {
@@ -92,7 +92,19 @@ export default function RedacoesTableView({ redacoes, filterTab, setFilterTab, o
 
       {/* Main Card List Container */}
       <div className="space-y-2.5">
-        {filteredRedacoes.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-2.5 animate-pulse">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-2 flex-1 w-full">
+                  <div className="h-4 bg-[#e6e5e0] rounded-md w-48" />
+                  <div className="h-3 bg-[#fafaf7] rounded-md w-32" />
+                </div>
+                <div className="h-8 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg w-24 shrink-0" />
+              </div>
+            ))}
+          </div>
+        ) : filteredRedacoes.length === 0 ? (
           <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
             <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
             {isAdmin

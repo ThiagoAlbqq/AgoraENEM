@@ -2,7 +2,7 @@ import React from 'react';
 import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToUpload }) {
+export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload }) {
   const { user, isAdmin } = useAuth();
 
   const totalCount = redacoes.length;
@@ -75,7 +75,17 @@ export default function DashboardView({ redacoes, onSelectRedacao, onNavigateToU
       </div>
 
       {/* Main KPI Stat Cards */}
-      {isAdmin ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl space-y-3">
+              <div className="h-3 bg-[#e6e5e0] rounded w-24" />
+              <div className="h-7 bg-[#fafaf7] rounded w-16" />
+              <div className="h-3 bg-[#fafaf7] rounded w-32" />
+            </div>
+          ))}
+        </div>
+      ) : isAdmin ? (
         /* Admin KPI Cards */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
