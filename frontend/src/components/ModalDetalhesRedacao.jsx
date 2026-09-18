@@ -195,7 +195,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const printDateStr = new Date().toLocaleDateString('pt-BR');
   const printTimeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-  // INSTITUTIONAL CORPORATE OFFICIAL SHEET TEMPLATE (2-Page Duplex Layout - INEP/Cesgranrio Standard)
+  // EDUCATIONAL SAAS PREMIUM OFFICIAL SHEET TEMPLATE (Ink-Saving 2-Page Duplex Layout)
   const renderMinimalistOfficialSheet = () => {
     // Generate a deterministic SHA-256 style validation hash for visual authenticity
     const authHash = `SHA256:${String(redacao.id * 7919 + 104729).padStart(8, '0')}FE${String(redacao.id * 104729).substring(0, 16).toUpperCase()}`;
@@ -212,8 +212,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
         numberedLines.push({ num: currentLineNum++, text: '' });
         return;
       }
-      // Chunk long lines to fit ~75 characters per line
-      const lineChunks = paragraph.match(/.{1,75}(\s|$)/g) || [paragraph];
+      // Chunk long lines to fit ~70 characters per line for optimal reading
+      const lineChunks = paragraph.match(/.{1,70}(\s|$)/g) || [paragraph];
       lineChunks.forEach(chunk => {
         if (currentLineNum <= 25) {
           numberedLines.push({ num: currentLineNum++, text: chunk.trim() });
@@ -223,103 +223,108 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
     const studentNameDisplay = sanitizePdfText(redacao.nome_aluno || data.aluno || 'Estudante Não Identificado');
     const turmaDisplay = sanitizePdfText(redacao.turma_aluno || data.turma || 'Geral');
+    const notaTotal = enem.nota_total_enem !== undefined ? Number(enem.nota_total_enem) : 0;
+    const scoreGaugePct = Math.min(100, Math.max(0, (notaTotal / 1000) * 100));
 
     return (
-      <div id="minimalist-pdf-document" className="w-[794px] max-w-[794px] bg-[#ffffff] text-[#0b2447] font-sans text-xs box-border">
+      <div id="minimalist-pdf-document" className="w-[794px] max-w-[794px] bg-[#ffffff] text-[#0f172a] font-sans text-xs box-border">
 
         {/* ==================== PAGE 1: AVALIAÇÃO PEDAGÓGICA (ENEM + SISEDU) ==================== */}
-        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0b2447] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0f172a] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           
-          {/* Subtle Diagonal Institutional Watermark */}
+          {/* Subtle Diagonal Institutional Watermark (4% opacity) */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] rotate-[-30deg] select-none z-0">
-            <span className="text-4xl font-black font-mono tracking-widest text-[#0b2447] uppercase text-center leading-tight">
+            <span className="text-4xl font-black font-mono tracking-widest text-[#0f172a] uppercase text-center leading-tight">
               SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
             </span>
           </div>
 
           <div className="space-y-4 relative z-10">
-            {/* Top Institutional Header Bar */}
-            <div className="border-b-2 border-[#0b2447] pb-3 flex justify-between items-stretch" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            {/* Top Institutional Header Bar (Discreet & Ink-Saving) */}
+            <div className="border-b border-[#e2e8f0] pb-3 flex justify-between items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded bg-[#0b2447] text-[#ffffff] flex flex-col items-center justify-center font-extrabold tracking-tighter text-base border-2 border-[#c9a227] shrink-0 shadow-sm">
+                <div className="w-10 h-10 rounded border-2 border-[#0f172a] text-[#0f172a] flex flex-col items-center justify-center font-extrabold tracking-tighter text-sm shrink-0">
                   <span>ÁG</span>
-                  <span className="text-[8px] tracking-widest text-[#f59e0b] font-mono -mt-1">ENEM</span>
+                  <span className="text-[7px] tracking-widest text-[#b45309] font-mono -mt-1 font-bold">ENEM</span>
                 </div>
                 <div>
-                  <h1 className="text-base font-extrabold tracking-tight text-[#0b2447] uppercase font-sans leading-none">
-                    ÁGORA ENEM — FICHA DE AVALIAÇÃO DE REDAÇÃO
+                  <h1 className="text-sm font-bold tracking-tight text-[#0f172a] uppercase font-sans leading-none">
+                    Ágora ENEM — Boletim de Avaliação de Redação
                   </h1>
-                  <p className="text-[9.5px] font-semibold text-[#c9a227] uppercase tracking-wider mt-1 font-mono">
-                    SECRETARIA DA EDUCAÇÃO • SISTEMA PREDITIVO DE AVALIAÇÃO TEXTUAL (ENEM x SISEDU)
+                  <p className="text-[9px] font-medium text-[#64748b] uppercase tracking-wider mt-0.5 font-sans">
+                    Secretaria da Educação • Sistema Preditivo (ENEM x SISEDU)
                   </p>
                 </div>
               </div>
 
-              <div className="text-right font-mono text-[9px] text-[#475569] bg-[#f8fafc] border border-[#e2e8f0] px-3 py-1.5 rounded flex flex-col justify-center items-end shrink-0">
+              <div className="text-right font-mono text-[8.5px] text-[#475569] flex flex-col items-end shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[#0b2447] font-bold">REGISTRO:</span>
-                  <span className="bg-[#0b2447] text-[#ffffff] px-1.5 py-0.5 rounded font-bold text-[9.5px]">#{String(redacao.id).padStart(5, '0')}</span>
+                  <span className="text-[#64748b] font-sans text-[8px] uppercase tracking-wider">REGISTRO:</span>
+                  <span className="border border-[#0f172a] text-[#0f172a] px-1.5 py-0.2 rounded font-bold">#{String(redacao.id).padStart(5, '0')}</span>
                 </div>
-                <div className="mt-1 text-[#64748b]">EMISSÃO: <strong className="text-[#0b2447]">{printDateStr} {printTimeStr}</strong></div>
-                <div className="mt-0.5 inline-block text-[8px] font-sans font-bold uppercase text-[#047857] bg-[#ecfdf5] border border-[#a7f3d0] px-1 rounded">
-                  Documento Oficial Autenticado
-                </div>
+                <div className="mt-1 text-[#64748b]">EMISSÃO: <strong className="text-[#0f172a]">{printDateStr} {printTimeStr}</strong></div>
               </div>
             </div>
 
-            {/* Student Identification & Score Banner Card */}
-            <div className="grid grid-cols-12 gap-3 bg-[#f8fafc] border border-[#cbd5e1] p-3 rounded.lg font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="col-span-8 space-y-2 pr-3 border-r border-[#e2e8f0]">
-                <div className="flex flex-col">
-                  <span className="text-[#64748b] uppercase text-[8.5px] font-sans font-bold tracking-wider">Estudante Avaliado:</span>
-                  <strong className="text-base text-[#0b2447] font-sans font-bold truncate">{studentNameDisplay}</strong>
+            {/* Student Identification & HERO SCORE CARD */}
+            <div className="border border-[#e2e8f0] p-4 rounded-lg bg-[#ffffff] grid grid-cols-12 gap-4 items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div className="col-span-7 space-y-2.5 pr-4 border-r border-[#e2e8f0]">
+                <div>
+                  <span className="text-[#64748b] uppercase text-[8px] font-sans font-bold tracking-wider block">Estudante:</span>
+                  <h2 className="text-base text-[#0f172a] font-sans font-bold truncate">{studentNameDisplay}</h2>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-[10px] pt-1">
+                <div className="grid grid-cols-3 gap-2 text-[9.5px] pt-0.5">
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">TURMA:</span>
-                    <strong className="text-[#0b2447] truncate block">{turmaDisplay}</strong>
+                    <span className="text-[#64748b] block text-[8px] font-sans uppercase">TURMA:</span>
+                    <strong className="text-[#0f172a] truncate block">{turmaDisplay}</strong>
                   </div>
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">DATA LANÇAMENTO:</span>
-                    <strong className="text-[#0b2447] block">{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong>
+                    <span className="text-[#64748b] block text-[8px] font-sans uppercase">LANÇAMENTO:</span>
+                    <strong className="text-[#0f172a] block">{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong>
                   </div>
                   <div>
-                    <span className="text-[#64748b] block text-[8.5px] font-sans font-semibold">ENTRADA DO TEXTO:</span>
-                    <strong className="text-[#0b2447] block">{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong>
+                    <span className="text-[#64748b] block text-[8px] font-sans uppercase">ORIGEM:</span>
+                    <strong className="text-[#0f172a] block">{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Total ENEM Score Badge */}
-              <div className="col-span-4 flex flex-col justify-center items-center text-center pl-1">
-                <span className="text-[8.5px] font-sans font-extrabold uppercase tracking-wider text-[#b45309]">NOTA FINAL ENEM</span>
-                <div className="my-1 px-4 py-1.5 bg-[#0b2447] text-[#ffffff] rounded-lg border-2 border-[#c9a227] shadow-xs flex items-baseline gap-1">
-                  <span className="text-2xl font-black font-mono text-[#f59e0b] leading-none">
+              {/* HERO SCORE ELEMENT (0-1000 with Scale Gauge) */}
+              <div className="col-span-5 flex flex-col items-center justify-center text-center pl-2">
+                <span className="text-[8px] font-sans font-bold uppercase tracking-wider text-[#64748b]">NOTA FINAL ENEM</span>
+                <div className="flex items-baseline gap-1 my-0.5">
+                  <span className="text-4xl font-black font-serif text-[#0f172a] leading-none">
                     {enem.nota_total_enem !== undefined ? enem.nota_total_enem : '—'}
                   </span>
-                  <span className="text-[10px] font-medium text-[#94a3b8]">/ 1000</span>
+                  <span className="text-xs font-mono font-medium text-[#64748b]">/ 1000</span>
                 </div>
-                <span className="text-[8px] font-sans text-[#64748b]">Escala Oficial MEC</span>
+                {/* Subtle Horizontal Score Position Indicator Gauge */}
+                <div className="w-32 h-1 bg-[#e2e8f0] rounded-full relative overflow-visible mt-1.5">
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#0f172a] border border-[#ffffff] shadow-xs" 
+                    style={{ left: `calc(${scoreGaugePct}% - 5px)` }}
+                  />
+                </div>
+                <span className="text-[7.5px] font-sans text-[#64748b] mt-1.5 uppercase tracking-wider">Escala Oficial MEC</span>
               </div>
             </div>
 
-            {/* SECTION 1: TABELA COMPACTA DE COMPETÊNCIAS ENEM (C1 A C5) */}
+            {/* SECTION 1: MATRIZ DE COMPETÊNCIAS DO ENEM (SaaS Clean Data Grid) */}
             <div className="mt-3 space-y-1.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="flex items-center justify-between border-b-2 border-[#0b2447] pb-1">
-                <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#c9a227] inline-block"></span>
-                  1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
-                </h2>
-                <span className="text-[9px] font-mono text-[#64748b] uppercase">Pesos Oficiais MEC</span>
+              <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-1">
+                <h3 className="text-[10px] font-bold uppercase text-[#0f172a] tracking-wider font-sans border-l-2 border-[#0f172a] pl-2">
+                  1. Matriz de Competências do ENEM (0 a 200 pontos cada)
+                </h3>
+                <span className="text-[8px] font-mono text-[#64748b] uppercase">Pesos Oficiais MEC</span>
               </div>
 
-              <table className="w-full text-left border-collapse text-[9.5px] border border-[#cbd5e1] shadow-2xs">
+              <table className="w-full text-left border-collapse text-[9px]">
                 <thead>
-                  <tr className="bg-[#0b2447] text-[#ffffff] font-mono text-[8.5px] uppercase tracking-wider">
-                    <th className="p-2 border-r border-[#334155] w-1/4">Competência</th>
-                    <th className="p-2 border-r border-[#334155] text-center w-24">Pontuação</th>
-                    <th className="p-2 border-r border-[#334155] w-1/3">Evidência / Citação no Texto</th>
-                    <th className="p-2">Parecer Pedagógico Explicativo</th>
+                  <tr className="border-b border-[#cbd5e1] text-[#64748b] font-mono text-[8px] uppercase tracking-wider">
+                    <th className="py-1.5 pr-2 font-medium w-1/4">Competência</th>
+                    <th className="py-1.5 px-2 font-medium text-right w-20">Nota</th>
+                    <th className="py-1.5 px-3 font-medium w-1/3">Citação / Evidência no Texto</th>
+                    <th className="py-1.5 pl-2 font-medium">Parecer Pedagógico</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,30 +332,21 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     const comp = enem[key] || { nota: 0, citacao_texto: 'Elemento ausente', justificativa: 'Não avaliado' };
                     const isEven = idx % 2 === 0;
                     const bgClass = isEven ? 'bg-[#ffffff]' : 'bg-[#f8fafc]';
-                    const scorePct = Math.min(100, Math.max(0, (comp.nota / 200) * 100));
-
                     const cleanCitacao = sanitizePdfText(comp.citacao_texto);
                     const cleanParecer = sanitizePdfText(comp.justificativa);
 
                     return (
-                      <tr key={key} className={`align-top ${bgClass} border-b border-[#e2e8f0]`} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                        <td className="p-1.5 border-r border-[#e2e8f0] font-semibold text-[#0b2447]">
-                          <div className="font-bold text-[#0b2447]">{title}</div>
+                      <tr key={key} className={`align-top ${bgClass} border-b border-[#f1f5f9]`} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                        <td className="py-2 pr-2 font-semibold text-[#0f172a]">
+                          <div className="font-bold text-[#0f172a] text-[9.5px]">{title}</div>
                         </td>
-                        <td className="p-1.5 border-r border-[#e2e8f0] text-center font-mono">
-                          <div className="font-extrabold text-xs text-[#0b2447]">{comp.nota} <span className="text-[8px] font-normal text-[#64748b]">/200</span></div>
-                          {/* Visual Score Bar */}
-                          <div className="w-full bg-[#e2e8f0] rounded-full h-1 mt-1 overflow-hidden">
-                            <div 
-                              className="h-full bg-[#0b2447]" 
-                              style={{ width: `${scorePct}%` }}
-                            />
-                          </div>
+                        <td className="py-2 px-2 text-right font-serif font-bold text-xs text-[#0f172a]">
+                          {comp.nota} <span className="text-[8px] font-sans font-normal text-[#64748b]">/200</span>
                         </td>
-                        <td className="p-1.5 border-r border-[#e2e8f0] font-mono text-[8.5px] italic text-[#334155] bg-[#f1f5f9]/50 leading-tight">
+                        <td className="py-2 px-3 font-mono text-[8.5px] italic text-[#475569] leading-tight border-l-2 border-[#e2e8f0] pl-2">
                           {cleanCitacao ? `"${cleanCitacao}"` : '—'}
                         </td>
-                        <td className="p-1.5 leading-tight text-[#1e293b] text-[9px]">
+                        <td className="py-2 pl-2 leading-tight text-[#334155] text-[8.5px]">
                           {cleanParecer}
                         </td>
                       </tr>
@@ -360,14 +356,13 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               </table>
             </div>
 
-            {/* SECTION 2: MATRIZ DESCRITORES SISEDU / SPAECE (D05 - D18) */}
+            {/* SECTION 2: DESCRITORES SISEDU (Ink-Saving Outline Badges) */}
             <div className="mt-3 space-y-1.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div className="flex items-center justify-between border-b-2 border-[#0b2447] pb-1">
-                <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#047857] inline-block"></span>
-                  2. DESCRITORES DE DESEMPENHO SISEDU / SPAECE (D05 A D18)
-                </h2>
-                <span className="text-[9px] font-mono text-[#64748b] uppercase">Matriz Estadual SEDUC</span>
+              <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-1">
+                <h3 className="text-[10px] font-bold uppercase text-[#0f172a] tracking-wider font-sans border-l-2 border-[#047857] pl-2">
+                  2. Matriz de Descritores Regionais SISEDU (D05 a D18)
+                </h3>
+                <span className="text-[8px] font-mono text-[#64748b] uppercase">Matriz Estadual SEDUC</span>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -376,23 +371,24 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   const nivel = descObj.nivel || (code === 'D15' ? 'Inicial' : 'Intermediário');
                   const cleanJustificativa = sanitizePdfText(descObj.justificativa || 'Avaliação pedagógica em conformidade com as rubricas regionais.');
                   
-                  let badgeStyle = 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]'; // Avançado / Adequado
+                  // Ink-Saving Outline Badge (Transparent Background + Colored Border & Text)
+                  let badgeStyle = 'border border-[#047857] text-[#047857] bg-transparent'; // Avançado / Adequado
                   if (nivel === 'Intermediário' || nivel === 'Em Desenvolvimento') {
-                    badgeStyle = 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]';
+                    badgeStyle = 'border border-[#b45309] text-[#b45309] bg-transparent';
                   } else if (nivel === 'Inicial') {
-                    badgeStyle = 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]';
+                    badgeStyle = 'border border-[#64748b] text-[#64748b] bg-transparent';
                   }
 
                   return (
-                    <div key={code} className="border border-[#cbd5e1] p-1.5 rounded bg-[#ffffff] font-mono text-[9px] flex flex-col justify-between shadow-2xs">
+                    <div key={code} className="border border-[#e2e8f0] p-1.5 rounded bg-[#ffffff] font-mono text-[8.5px] flex flex-col justify-between">
                       <div>
-                        <div className="flex items-center justify-between font-bold text-[#0b2447] border-b border-[#e2e8f0] pb-0.5 mb-1">
-                          <span className="font-extrabold text-[#0b2447] text-[9.5px]">{code}</span>
-                          <span className={`px-1.5 py-0.2 text-[8px] font-sans font-bold uppercase rounded border ${badgeStyle}`}>
+                        <div className="flex items-center justify-between font-bold text-[#0f172a] border-b border-[#f1f5f9] pb-0.5 mb-1">
+                          <span className="font-extrabold text-[#0f172a] text-[9px]">{code}</span>
+                          <span className={`px-1.5 py-0.1 text-[7.5px] font-sans font-bold uppercase rounded ${badgeStyle}`}>
                             {nivel}
                           </span>
                         </div>
-                        <p className="text-[#334155] leading-tight text-[8px] font-sans mt-0.5">{cleanJustificativa}</p>
+                        <p className="text-[#475569] leading-tight text-[8px] font-sans mt-0.5">{cleanJustificativa}</p>
                       </div>
                     </div>
                   );
@@ -402,9 +398,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Page 1 Footer */}
-          <div className="pt-2 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
+          <div className="pt-2 border-t border-[#e2e8f0] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
             <div>Sistema Ágora ENEM • Secretaria da Educação • Documento Oficial de Avaliação</div>
-            <div className="font-bold text-[#0b2447]">Página 01 / 02</div>
+            <div className="font-bold text-[#0f172a]">Página 01 de 02</div>
           </div>
         </div>
 
@@ -412,11 +408,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
         <div className="html2pdf__page-break" style={{ pageBreakBefore: 'always', breakBefore: 'page' }} />
 
         {/* ==================== PAGE 2: TRANSCRIÇÃO INTEGRAL & ASSINATURA ==================== */}
-        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0b2447] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+        <div className="relative w-[794px] h-[1123px] max-h-[1123px] bg-[#ffffff] text-[#0f172a] p-8 box-border flex flex-col justify-between overflow-hidden" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           
           {/* Subtle Diagonal Institutional Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] rotate-[-30deg] select-none z-0">
-            <span className="text-4xl font-black font-mono tracking-widest text-[#0b2447] uppercase text-center leading-tight">
+            <span className="text-4xl font-black font-mono tracking-widest text-[#0f172a] uppercase text-center leading-tight">
               SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
             </span>
           </div>
@@ -424,33 +420,32 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-between">
             <div>
               {/* Page 2 Mini Reference Header */}
-              <div className="border-b-2 border-[#0b2447] pb-2 flex justify-between items-center font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div className="border-b border-[#e2e8f0] pb-2 flex justify-between items-center font-mono text-[8.5px] text-[#64748b]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#0b2447] text-[#ffffff] px-1.5 py-0.5 rounded font-bold">ANEXO II</span>
-                  <strong className="text-[#0b2447] uppercase font-sans text-[10px]">Transcrição Verbatim do Texto Original</strong>
+                  <span className="border border-[#0f172a] text-[#0f172a] px-1.5 py-0.2 rounded font-bold text-[8px]">ANEXO II</span>
+                  <strong className="text-[#0f172a] uppercase font-sans text-[9.5px]">Transcrição Verbatim do Texto Original</strong>
                 </div>
-                <div>REGISTRO: <strong className="text-[#0b2447]">#{String(redacao.id).padStart(5, '0')}</strong> • ESTUDANTE: <strong className="text-[#0b2447]">{studentNameDisplay}</strong></div>
+                <div>REGISTRO: <strong className="text-[#0f172a]">#{String(redacao.id).padStart(5, '0')}</strong> • ESTUDANTE: <strong className="text-[#0f172a]">{studentNameDisplay}</strong></div>
               </div>
 
               {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO COM LINHAS PAUTADAS (MAX 25 LINHAS) */}
               <div className="mt-3 space-y-2 flex-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                <div className="flex items-center justify-between border-b border-[#cbd5e1] pb-1">
-                  <h2 className="text-xs font-extrabold uppercase text-[#0b2447] tracking-wider font-sans flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0b2447] inline-block"></span>
-                    3. TRANSCRIÇÃO FIEL DO TEXTO MANUSCRITO / DIGITADO
-                  </h2>
-                  <span className="text-[8.5px] font-mono text-[#64748b] uppercase">Folha Oficial de Transcrição</span>
+                <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-1">
+                  <h3 className="text-[10px] font-bold uppercase text-[#0f172a] tracking-wider font-sans border-l-2 border-[#0f172a] pl-2">
+                    3. Transcrição Fiel do Texto Manuscrito / Digitado
+                  </h3>
+                  <span className="text-[8px] font-mono text-[#64748b] uppercase">Folha Oficial de Transcrição</span>
                 </div>
 
-                <div className="border border-[#cbd5e1] bg-[#ffffff] rounded overflow-hidden font-mono text-[10px] shadow-2xs">
+                <div className="border border-[#e2e8f0] bg-[#ffffff] rounded overflow-hidden font-mono text-[9.5px]">
                   <table className="w-full border-collapse">
                     <tbody>
                       {numberedLines.map(({ num, text }) => (
                         <tr key={num} className="border-b border-[#f1f5f9]">
-                          <td className="w-9 py-1 px-2 text-center text-[#94a3b8] bg-[#f8fafc] border-r border-[#e2e8f0] font-bold text-[9px] select-none">
+                          <td className="w-8 py-1 px-2 text-center text-[#94a3b8] bg-[#f8fafc] border-r border-[#e2e8f0] font-mono font-bold text-[8.5px] select-none">
                             {String(num).padStart(2, '0')}
                           </td>
-                          <td className="py-1 px-3 text-[#1e293b] leading-snug whitespace-pre-wrap font-sans text-[10px]">
+                          <td className="py-1 px-3 text-[#1e293b] leading-snug whitespace-pre-wrap font-sans text-[9.5px]">
                             {text || <span className="text-[#cbd5e1] italic"></span>}
                           </td>
                         </tr>
@@ -462,28 +457,28 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             </div>
 
             {/* SECTION 4: BLOCO DE AUTENTICIDADE DIGITAL E ASSINATURA */}
-            <div className="pt-3 border-t-2 border-[#0b2447] grid grid-cols-12 gap-4 items-end mt-2 font-mono text-[9px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div className="pt-3 border-t border-[#e2e8f0] grid grid-cols-12 gap-4 items-end mt-2 font-mono text-[8.5px] text-[#475569]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               
               {/* Digital Authenticity Stamp & Hash */}
-              <div className="col-span-7 bg-[#f8fafc] border border-[#cbd5e1] p-3 rounded space-y-1">
-                <div className="flex items-center gap-1.5 text-[#047857] font-bold font-sans text-[9.5px]">
-                  <ShieldCheck className="w-4 h-4 text-[#047857]" />
+              <div className="col-span-7 border border-[#e2e8f0] p-3 rounded space-y-1 bg-[#ffffff]">
+                <div className="flex items-center gap-1.5 text-[#047857] font-bold font-sans text-[9px]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#047857]" />
                   AUTENTICAÇÃO DIGITAL DA AVALIAÇÃO
                 </div>
-                <p className="text-[8px] font-sans text-[#475569] leading-tight">
-                  Este documento foi avaliado pelo Agente Unificado Ágora ENEM e validado pedagogicamente com base nas diretrizes oficiais do MEC e da SEDUC.
+                <p className="text-[7.5px] font-sans text-[#475569] leading-tight">
+                  Documento avaliado pelo Agente Unificado Ágora ENEM e validado pedagogicamente com base nas diretrizes oficiais do MEC e da SEDUC.
                 </p>
-                <div className="pt-1 text-[7.5px] text-[#64748b] border-t border-[#e2e8f0] flex flex-col gap-0.5">
-                  <div>CÓDIGO HASH: <strong className="text-[#0b2447]">{authHash}</strong></div>
-                  <div>CHAVE DE VALIDAÇÃO: <strong className="text-[#0b2447]">AGORA-2026-MEC-SEDUC-CE</strong></div>
+                <div className="pt-1 text-[7.5px] text-[#64748b] border-t border-[#f1f5f9] flex flex-col gap-0.5">
+                  <div>CÓDIGO HASH: <strong className="text-[#0f172a]">{authHash}</strong></div>
+                  <div>CHAVE DE VALIDAÇÃO: <strong className="text-[#0f172a]">AGORA-2026-MEC-SEDUC-CE</strong></div>
                 </div>
               </div>
 
               {/* Teacher Signature Line */}
               <div className="col-span-5 text-center flex flex-col justify-end items-center">
-                <div className="w-full border-t-2 border-[#0b2447] pt-1.5 mt-6">
-                  <div className="font-extrabold text-[#0b2447] font-sans text-[10px] uppercase">Assinatura do Professor / Avaliador</div>
-                  <div className="text-[8px] text-[#64748b] font-sans">Visto de Validação Pedagógica</div>
+                <div className="w-full border-t border-[#0f172a] pt-1 mt-6">
+                  <div className="font-bold text-[#0f172a] font-sans text-[9.5px] uppercase">Assinatura do Professor / Avaliador</div>
+                  <div className="text-[7.5px] text-[#64748b] font-sans">Visto de Validação Pedagógica</div>
                 </div>
               </div>
 
@@ -492,9 +487,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Page 2 Footer */}
-          <div className="pt-2 border-t border-[#cbd5e1] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
+          <div className="pt-2 border-t border-[#e2e8f0] flex justify-between items-center font-mono text-[8px] text-[#64748b] relative z-10">
             <div>Sistema Ágora ENEM • Secretaria da Educação • Anexo II de Transcrição</div>
-            <div className="font-bold text-[#0b2447]">Página 02 / 02</div>
+            <div className="font-bold text-[#0f172a]">Página 02 de 02</div>
           </div>
         </div>
 
