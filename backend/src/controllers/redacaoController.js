@@ -1,5 +1,5 @@
 import db from '../config/db.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
+import { supabase, isSupabaseConfigured, getNextId } from '../config/supabaseClient.js';
 
 // POST /api/redacoes/sync-legacy
 // Migrates legacy IndexedDB local evaluations to central cloud DB (Supabase/SQLite)
@@ -67,7 +67,9 @@ export const syncLegacyRedacoes = async (req, res) => {
           if (matchedUser) userId = matchedUser.id;
         }
 
+        const nextId = await getNextId('redacoes');
         const { error: insErr } = await supabase.from('redacoes').insert({
+          ...(nextId ? { id: nextId } : {}),
           user_id: userId,
           nome_aluno: nomeAluno,
           turma_aluno: turmaAluno,
@@ -307,9 +309,11 @@ export const createRedacao = async (req, res) => {
         if (matched) targetUserId = matched.id;
       }
 
+      const nextId = await getNextId('redacoes');
       const { data, error } = await supabase
         .from('redacoes')
         .insert({
+          ...(nextId ? { id: nextId } : {}),
           user_id: targetUserId,
           nome_aluno: nome_aluno || 'Aluno Não Identificado',
           turma_aluno: turma_aluno || 'Geral',

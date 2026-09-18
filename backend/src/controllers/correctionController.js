@@ -1,5 +1,5 @@
 import { agenteAvaliadorUnificado, getMockENEMEvaluation } from '../services/aiService.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
+import { supabase, isSupabaseConfigured, getNextId } from '../config/supabaseClient.js';
 import db from '../config/db.js';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
@@ -102,9 +102,12 @@ export async function handleCorrection(req, res) {
       if (isSupabaseConfigured) {
         try {
           console.log(`[CorrectionController] Gravando redação diretamente no Supabase (${finalStudentName})...`);
+          const nextId = await getNextId('redacoes');
+
           const { data: insertedRow, error: insErr } = await supabase
             .from('redacoes')
             .insert({
+              ...(nextId ? { id: nextId } : {}),
               user_id: userId,
               nome_aluno: finalStudentName,
               turma_aluno: finalTurma,
