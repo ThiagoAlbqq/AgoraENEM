@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2, Search, GraduationCap, Link, Unlink } from 'lucide-react';
+import { X, Award, UserCheck, UserX, Image as ImageIcon, Save, Sparkles, BookOpen, Quote, ShieldCheck, Compass, Copy, Check, Printer, FileText, Download, Loader2, Edit3, Search, GraduationCap, Link, Unlink } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { updateNomeAluno } from '../db/db';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [manualName, setManualName] = useState(redacao?.nome_aluno || '');
   const [manualTurma, setManualTurma] = useState(redacao?.turma_aluno || '');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
   const [activeTab, setActiveTab] = useState('enem'); // 'enem' | 'sisedu' | 'texto'
   const [copiedText, setCopiedText] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -85,6 +86,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     try {
       await updateNomeAluno(redacao.id, manualName.trim(), manualTurma.trim() || null);
       if (onUpdated) onUpdated();
+      setIsEditingName(false);
     } catch (err) {
       console.error(err);
     } finally {
@@ -98,7 +100,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
     setIsGeneratingPDF(true);
     try {
-      const studentNameClean = (data.aluno || redacao.nome_aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
+      const studentNameClean = (redacao.nome_aluno || data.aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
       const opt = {
@@ -175,9 +177,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           {/* Identification & Summary Grid */}
           <div className="grid grid-cols-3 gap-3 border border-[#111111] p-3 rounded font-mono text-[10px]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
             <div className="col-span-2 space-y-1">
-              <div className="flex flex-col column"><span className="text-[#666666] uppercase text-[9px] block font-sans font-bold">Estudante:</span> <strong className="text-sm text-[#111111] font-sans">{data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}</strong></div>
+              <div className="flex flex-col column"><span className="text-[#666666] uppercase text-[9px] block font-sans font-bold">Estudante:</span> <strong className="text-sm text-[#111111] font-sans">{redacao.nome_aluno || data.aluno || 'Estudante Não Identificado'}</strong></div>
               <div className="flex gap-4 text-[10.5px] pt-1 justify-between">
-                <span className="flex flex-col column"><span className="text-[#666666]">Turma:</span> <strong>{data.turma || redacao.turma_aluno || 'Sem Turma'}</strong></span>
+                <span className="flex flex-col column"><span className="text-[#666666]">Turma:</span> <strong>{redacao.turma_aluno || data.turma || 'Sem Turma'}</strong></span>
                 <span className="flex flex-col column items-center"><span className="text-[#666666]">Data Lançamento:</span> <strong>{new Date(redacao.data_captura).toLocaleDateString('pt-BR')}</strong></span>
                 <span className="flex flex-col column items-end"><span className="text-[#666666]">Entrada:</span> <strong>{redacao.imagem_base64 ? 'Imagem OCR' : 'Digitado'}</strong></span>
               </div>
@@ -291,7 +293,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           {/* Page 2 Mini Reference Header */}
           <div className="border-b border-[#111111] pb-1.5 flex justify-between items-center font-mono text-[9.5px] text-[#444444]" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
             <div><strong className="text-[#111111]">ANEXO II: TRANSCRIÇÃO INTEGRAL & VALIDAÇÃO</strong> — REGISTRO #{String(redacao.id).padStart(5, '0')}</div>
-            <div>Estudante: <strong className="text-[#111111]">{data.aluno || redacao.nome_aluno || 'Estudante'}</strong></div>
+            <div>Estudante: <strong className="text-[#111111]">{redacao.nome_aluno || data.aluno || 'Estudante'}</strong></div>
           </div>
 
           {/* SECTION 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO */}
@@ -340,16 +342,27 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   {data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}
                 </h3>
                 {isIdentified ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#9fc9a2]/30 text-[#1f8a65] shrink-0">
-                    <UserCheck className="w-3 h-3" />
-                    Identificado
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#e6e5e0] text-[#26251e]">
+                      <UserCheck className="w-3.5 h-3.5 text-[#1f8a65]" />
+                      {redacao.nome_aluno || data.aluno}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsEditingName(!isEditingName)}
+                      className="p-1.5 text-[#807d72] hover:text-[#f54e00] transition-colors rounded-md hover:bg-[#e6e5e0]"
+                      title="Editar Aluno e Turma"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#dfa88f]/30 text-[#f54e00] shrink-0">
                     <UserX className="w-3 h-3" />
                     Sem Nome
                   </span>
                 )}
+
               </div>
 
               <button
@@ -361,6 +374,60 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+
+          {/* Edit Name Banner */}
+          {(!isIdentified || isEditingName) && (
+            <div className="bg-[#fafaf7] border-b border-[#e6e5e0] p-4 px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[#26251e] text-xs">
+                {!isIdentified ? (
+                  <UserX className="w-4 h-4 text-[#c08532] shrink-0" />
+                ) : (
+                  <Edit3 className="w-4 h-4 text-[#f54e00] shrink-0" />
+                )}
+                <span>
+                  {!isIdentified 
+                    ? <strong>Aluno/Turma não identificados automaticamente:</strong> 
+                    : <strong>Editando dados do Aluno:</strong>} Atribua os dados para vincular ao repositório:
+                </span>
+              </div>
+              <form onSubmit={handleSaveName} className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Nome do aluno..."
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-48"
+                />
+                <input
+                  type="text"
+                  placeholder="Turma (ex: 3º Ano A)..."
+                  value={manualTurma}
+                  onChange={(e) => setManualTurma(e.target.value)}
+                  className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-36"
+                />
+                <button
+                  type="submit"
+                  disabled={isSavingName || !manualName.trim()}
+                  className="px-3 py-1.5 bg-[#f54e00] hover:bg-[#d04200] text-white font-medium text-xs rounded-md transition-colors flex items-center gap-1 shrink-0 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Salvar
+                </button>
+                {isIdentified && isEditingName && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingName(false);
+                      setManualName(redacao.nome_aluno || '');
+                      setManualTurma(redacao.turma_aluno || '');
+                    }}
+                    className="px-3 py-1.5 bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md transition-colors flex items-center shrink-0 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </form>
 
             {/* Bottom Row: Metadata Chips + Score Badge */}
             <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-mono text-[#807d72]">
@@ -379,6 +446,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   <span className="text-[10px] text-[#807d72]">/1000</span>
                 </div>
               )}
+
             </div>
           </div>
 

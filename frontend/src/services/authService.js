@@ -97,6 +97,7 @@ export const authService = {
     let totalSkipped = 0;
     const total = localRedacoes.length;
 
+<<<<<<< HEAD
     // Sincroniza item a item para evitar estourar o limite de 4.5MB de payload por requisição da Vercel (FUNCTION_PAYLOAD_TOO_LARGE)
     for (let i = 0; i < total; i++) {
       const item = localRedacoes[i];
@@ -120,7 +121,14 @@ export const authService = {
         body: JSON.stringify({ redacoes: [itemToSend] })
       });
 
-      const data = await response.json().catch(() => ({}));
+      let data;
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Erro na sincronização (redação ${i + 1} de ${total}): o backend retornou uma página inválida em vez de dados (provavelmente está offline ou o servidor caiu).`);
+      }
+
       if (!response.ok) {
         throw new Error(data.error || `Erro ao sincronizar a redação ${i + 1} de ${total}.`);
       }

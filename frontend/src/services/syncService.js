@@ -42,7 +42,13 @@ export async function syncOfflineDocuments() {
         throw new Error(`Servidor retornou status ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error('Erro na sincronização: O backend retornou uma página inválida em vez de dados (provavelmente está offline ou o servidor caiu).');
+      }
       const chunkResults = data.results || [];
       allResults.push(...chunkResults);
 
