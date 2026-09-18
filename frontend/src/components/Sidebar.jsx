@@ -12,8 +12,10 @@ import {
   CloudUpload, 
   Wifi, 
   WifiOff, 
-  Shield 
+  Shield,
+  Download
 } from 'lucide-react';
+import { db } from '../db/db';
 import { useAuth } from '../context/AuthContext';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
@@ -41,6 +43,32 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     } finally {
       setIsCloudSyncing(false);
       setSyncProgress(null);
+    }
+  };
+
+  const handleExportLocalBackup = async () => {
+    try {
+      const redacoesLocais = await db.redacoes.toArray();
+      if (!redacoesLocais || redacoesLocais.length === 0) {
+        alert('Nenhuma redação encontrada no armazenamento local deste navegador.');
+        return;
+      }
+      const backupData = {
+        exported_at: new Date().toISOString(),
+        counts: { redacoes: redacoesLocais.length },
+        redacoes: redacoesLocais
+      };
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-redacoes-clara-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      alert(`🎉 Backup concluído com sucesso! ${redacoesLocais.length} redação(ões) baixada(s).`);
+    } catch (err) {
+      alert('Erro ao baixar backup local: ' + err.message);
     }
   };
 
@@ -168,6 +196,19 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
                 <span className="truncate">{syncProgress || 'Subir p/ Nuvem'}</span>
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={handleExportLocalBackup}
+              className="w-full py-1.5 px-2.5 rounded-lg text-xs font-normal border border-[#e6e5e0] bg-[#fafaf7] hover:bg-[#e6e5e0] text-[#5a5852] flex items-center justify-between transition-all cursor-pointer"
+              title="Baixar cópia de segurança em JSON de todas as redações salvas no navegador"
+            >
+              <span className="flex items-center gap-2 truncate">
+                <Download className="w-3.5 h-3.5 shrink-0 text-[#f54e00]" />
+                <span className="truncate">Baixar Backup (JSON)</span>
+              </span>
+            </button>
+
             {syncFeedback && (
               <span className="block px-2 text-[9.5px] font-mono text-[#1f8a65]">
                 {syncFeedback}
