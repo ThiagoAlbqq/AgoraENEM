@@ -28,8 +28,12 @@ export const authenticate = async (req, res, next) => {
       }
     }
 
-    if (!user) {
-      user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
+    if (!user && db) {
+      try {
+        user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
+      } catch (dbErr) {
+        console.warn('[DB Authenticate Warning]:', dbErr.message);
+      }
     }
 
     if (!user) {

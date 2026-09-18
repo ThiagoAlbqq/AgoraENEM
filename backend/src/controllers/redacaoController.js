@@ -18,12 +18,14 @@ export const syncLegacyRedacoes = async (req, res) => {
         const nomeAluno = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
         const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
 
-        // Check if existing by student name and capture date
-        const extractedDataObj = typeof item.extracted_data === 'string'
-          ? (JSON.parse(item.extracted_data || '{}'))
-          : (item.extracted_data || item.resultado || {});
+        let extractedDataObj = {};
+        if (typeof item.extracted_data === 'string') {
+          try { extractedDataObj = JSON.parse(item.extracted_data || '{}'); } catch(e) {}
+        } else {
+          extractedDataObj = item.extracted_data || item.resultado || {};
+        }
 
-        const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.avaliacoes?.enem?.nota_total_enem) || 0;
+        const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.avaliacoes?.enem?.nota_total_enem) || (extractedDataObj?.pontuacao_geral) || 0;
         const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
         const textoDigitado = item.texto_digitado || item.textoDigitado || null;
         const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
@@ -64,20 +66,6 @@ export const syncLegacyRedacoes = async (req, res) => {
 
           if (matchedUser) userId = matchedUser.id;
         }
-
-        const extractedDataObj = typeof item.extracted_data === 'string'
-          ? (JSON.parse(item.extracted_data || '{}'))
-          : (item.extracted_data || item.resultado || {});
-
-        const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.pontuacao_geral) || 0;
-        const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
-        const textoDigitado = item.texto_digitado || item.textoDigitado || null;
-        const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
-        const turmaAluno = item.turma_aluno || item.turmaAluno || 'Turma Geral';
-        const nomeDetectado = item.nome_detectado ? 1 : 0;
-        const statusValidacao = item.status_validacao || 'VALIDADA';
-        const validadoPor = req.user?.id || null;
-        const dataValidacao = new Date().toISOString();
 
         const { error: insErr } = await supabase.from('redacoes').insert({
           user_id: userId,

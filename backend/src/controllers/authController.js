@@ -29,8 +29,12 @@ export const login = async (req, res) => {
       user = data;
     }
 
-    if (!user) {
-      user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    if (!user && db) {
+      try {
+        user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+      } catch (dbErr) {
+        console.warn('[DB Auth Login Fallback Warning]:', dbErr.message);
+      }
     }
 
     if (!user) {
@@ -90,10 +94,14 @@ export const register = async (req, res) => {
       if (existing) {
         return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
       }
-    } else {
-      const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-      if (existingUser) {
-        return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
+    } else if (db) {
+      try {
+        const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+        if (existingUser) {
+          return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
+        }
+      } catch (dbErr) {
+        console.warn('[DB Register Check Warning]:', dbErr.message);
       }
     }
 
@@ -155,19 +163,23 @@ export const register = async (req, res) => {
         throw new Error(`Erro no Supabase Register: ${error.message}`);
       }
       newUser = data;
-    } else {
-      const result = db.prepare(`
-        INSERT INTO users (nome, email, senha_hash, role, turma)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(cleanNome, cleanEmail, senhaHash, userRole, cleanTurma);
+    } else if (db) {
+      try {
+        const result = db.prepare(`
+          INSERT INTO users (nome, email, senha_hash, role, turma)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(cleanNome, cleanEmail, senhaHash, userRole, cleanTurma);
 
-      newUser = {
-        id: result.lastInsertRowid,
-        nome: cleanNome,
-        email: cleanEmail,
-        role: userRole,
-        turma: cleanTurma
-      };
+        newUser = {
+          id: result.lastInsertRowid,
+          nome: cleanNome,
+          email: cleanEmail,
+          role: userRole,
+          turma: cleanTurma
+        };
+      } catch (dbErr) {
+        throw new Error(`Erro no SQLite Register: ${dbErr.message}`);
+      }
     }
 
     const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
@@ -207,13 +219,17 @@ export const getEstudantes = async (req, res) => {
       }
     }
 
-    if (estudantes.length === 0) {
-      estudantes = db.prepare(`
-        SELECT id, nome, email, turma, created_at 
-        FROM users 
-        WHERE role = 'ESTUDANTE' 
-        ORDER BY nome ASC
-      `).all();
+    if (estudantes.length === 0 && db) {
+      try {
+        estudantes = db.prepare(`
+          SELECT id, nome, email, turma, created_at 
+          FROM users 
+          WHERE role = 'ESTUDANTE' 
+          ORDER BY nome ASC
+        `).all() || [];
+      } catch (dbErr) {
+        console.warn('[DB GetEstudantes Warning]:', dbErr.message);
+      }
     }
 
     res.status(200).json({ estudantes });
