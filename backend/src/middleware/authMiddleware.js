@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'agora-enem-secret-key-2026';
 
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Acesso não autorizado. Token ausente.' });
@@ -13,8 +14,24 @@ export const authenticate = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Optional: fresh lookup from DB to ensure user is active
-    const user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
+    let user = null;
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nome, email, role, turma')
+        .eq('id', decoded.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        user = data;
+      }
+    }
+
+    if (!user) {
+      user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
+    }
+
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado ou inativo.' });
     }
