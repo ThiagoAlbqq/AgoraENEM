@@ -1,4 +1,5 @@
 import { db } from '../db/db';
+import { authService } from './authService';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api/corrigir';
 
@@ -83,11 +84,21 @@ export async function syncOfflineDocuments() {
       }
     }
 
+    // Auto-lança as redações avaliadas diretamente para o banco SQLite na nuvem
+    if (successCount > 0 && authService.getToken()) {
+      try {
+        console.log('[SyncService] Auto-lançando correções no banco SQLite na nuvem...');
+        await authService.syncLegacyToCloud();
+      } catch (autoSyncErr) {
+        console.warn('[SyncService] AVISO: Auto-lançamento na nuvem falhou:', autoSyncErr.message);
+      }
+    }
+
     return {
       successCount,
       errorCount,
       results: allResults,
-      message: `Correção cruzada concluída: ${successCount} avaliada(s) com sucesso, ${errorCount} falha(s).`
+      message: `Correção concluída e lançada na nuvem: ${successCount} avaliada(s) com sucesso, ${errorCount} falha(s).`
     };
   } catch (error) {
     console.error('[SyncService] Operação de correção falhou:', error);

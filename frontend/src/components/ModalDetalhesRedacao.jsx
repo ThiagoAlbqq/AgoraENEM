@@ -85,6 +85,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     setIsSavingName(true);
     try {
       await updateNomeAluno(redacao.id, manualName.trim(), manualTurma.trim() || null);
+      if (authService.getToken()) {
+        await authService.syncLegacyToCloud().catch(() => {});
+      }
       if (onUpdated) onUpdated();
       setIsEditingName(false);
     } catch (err) {
