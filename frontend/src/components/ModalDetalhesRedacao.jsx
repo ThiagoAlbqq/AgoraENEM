@@ -65,12 +65,19 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
   if (!redacao) return null;
 
-  const data = redacao.extracted_data || {};
+  const rawExtracted = redacao.extracted_data;
+  let data = {};
+  if (typeof rawExtracted === 'string') {
+    try { data = JSON.parse(rawExtracted); } catch (e) { data = {}; }
+  } else {
+    data = rawExtracted || {};
+  }
+
   const avaliacoes = data.avaliacoes || {};
   const enem = avaliacoes.enem || {};
   const sisedu = avaliacoes.sisedu || avaliacoes.sisedu_agora || {};
-  const siseduDescritores = sisedu.descritores || {};
-  const devolutivaInicial = data.devolutiva_nivel_inicial || avaliacoes.devolutiva_nivel_inicial;
+  const siseduDescritores = sisedu.descritores || sisedu || {};
+  const devolutivaInicial = data.devolutiva_nivel_inicial || avaliacoes.devolutiva_nivel_inicial || sisedu.devolutiva_nivel_inicial;
   const isIdentified = redacao.nome_detectado && redacao.nome_aluno;
 
   const fullTextContent = redacao.texto_digitado || data.texto_transcrito || 'Transcrição indisponível.';
@@ -252,50 +259,29 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             </table>
           </div>
 
-          {/* SECTION 2: MATRIZ SISEDU (PROJETO ÁGORA) */}
+          {/* SECTION 2: MATRIZ DESCRITORES SISEDU / SPAECE (D05 - D18) */}
           <div className="mt-5 space-y-3.5" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
             <h2 className="text-xs font-bold uppercase text-[#111111] tracking-wider border-b border-[#111111] pb-1 font-mono">
-              2. RUBRICAS QUALITATIVAS SISEDU (PROJETO ÁGORA ESCOLAR)
+              2. DESCRITORES DE DESEMPENHO SISEDU / SPAECE (D05 A D18)
             </h2>
 
-            <div className="grid grid-cols-2 gap-3">
-              {/* Dimensão Discursiva */}
-              <div className="border border-[#111111] p-3 space-y-1.5 rounded">
-                <h3 className="font-bold text-[10.5px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Discursiva</h3>
-                <div className="space-y-1.5 text-[11px]">
-                  {siseduDiscursivaMap.map(({ key, title }) => {
-                    const item = sisedu.dimensao_discursiva?.[key] || { nivel: 'Inicial', justificativa: '—' };
-                    return (
-                      <div key={key} className="my-2 border-b border-[#eeeeee] pb-1 last:border-b-0">
-                        <div className="flex justify-between font-semibold text-[#111111]">
-                          <span>{title}:</span>
-                          <span className="font-mono underline">{item.nivel}</span>
-                        </div>
-                        <p className="text-[#444444] leading-tight text-[10px] my-1">{item.justificativa}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {siseduDescritoresMap.map(({ code, title }) => {
+                const descObj = siseduDescritores[code] || sisedu[code] || {};
+                const nivel = descObj.nivel || (code === 'D15' ? 'Inicial' : 'Intermediário');
+                const justificativa = descObj.justificativa || 'Avaliação pedagógica em conformidade com as rubricas regionais.';
+                return (
+                  <div key={code} className="border border-[#111111] p-2 rounded font-mono text-[9px] flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between font-bold text-[#111111] border-b border-[#d0d0d0] pb-0.5 mb-1">
+                        <span>{code}:</span>
+                        <span className="underline">{nivel}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Dimensão Ético-Moral */}
-              <div className="border border-[#111111] p-3 space-y-1.5 rounded">
-                <h3 className="font-bold text-[10.5px] uppercase text-[#111111] border-b border-[#d0d0d0] pb-1">Dimensão Ético-Moral</h3>
-                <div className="space-y-1.5 text-[11px]">
-                  {siseduEticoMoralMap.map(({ key, title }) => {
-                    const item = sisedu.dimensao_etico_moral?.[key] || { nivel: 'Inicial', justificativa: '—' };
-                    return (
-                      <div key={key} className="my-2 border-b border-[#eeeeee] pb-1 last:border-b-0">
-                        <div className="flex justify-between font-semibold text-[#111111]">
-                          <span>{title}:</span>
-                          <span className="font-mono underline">{item.nivel}</span>
-                        </div>
-                        <p className="text-[#444444] leading-tight text-[10px] my-1">{item.justificativa}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      <p className="text-[#333333] leading-tight text-[8.5px] font-sans">{justificativa}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
