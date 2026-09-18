@@ -23,4 +23,9 @@ build/
 .idea/
 *.log
 backend/data/
+*.json
+!frontend/package.json
+!backend/package.json
+!package.json
+!vercel.json
 

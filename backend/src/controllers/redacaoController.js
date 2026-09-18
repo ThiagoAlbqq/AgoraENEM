@@ -1,8 +1,9 @@
 import db from '../config/db.js';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
 // POST /api/redacoes/sync-legacy
-// Migrates legacy IndexedDB local evaluations to central SQLite cloud DB
-export const syncLegacyRedacoes = (req, res) => {
+// Migrates legacy IndexedDB local evaluations to central cloud DB (Supabase/SQLite)
+export const syncLegacyRedacoes = async (req, res) => {
   try {
     const { redacoes } = req.body;
     if (!Array.isArray(redacoes) || redacoes.length === 0) {
@@ -12,81 +13,144 @@ export const syncLegacyRedacoes = (req, res) => {
     let insertedCount = 0;
     let skippedCount = 0;
 
-    const checkStmt = db.prepare(`
-      SELECT id FROM redacoes 
-      WHERE nome_aluno = ? AND data_captura = ?
-    `);
-
-    const findUserStmt = db.prepare(`
-      SELECT id FROM users 
-      WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?)) AND role = 'ESTUDANTE'
-    `);
-
-    const insertStmt = db.prepare(`
-      INSERT INTO redacoes (
-        user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
-        tipo_input, imagem_base64, texto_digitado, is_synced, extracted_data, nota_final,
-        status_validacao, validado_por, data_validacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-    `);
-
-    const syncTransaction = db.transaction((items) => {
-      for (const item of items) {
+    if (isSupabaseConfigured) {
+      for (const item of redacoes) {
         const nomeAluno = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
         const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
 
-        // Prevent duplicate syncs
-        const existing = checkStmt.get(nomeAluno, dataCaptura);
+        // Check if existing by student name and capture date
+        const { data: existing } = await supabase
+          .from('redacoes')
+          .select('id')
+          .eq('nome_aluno', nomeAluno)
+          .eq('data_captura', dataCaptura)
+          .maybeSingle();
+
         if (existing) {
           skippedCount++;
           continue;
         }
 
-        // Try linking to an existing student user by exact name
         let userId = item.user_id || null;
         if (!userId && nomeAluno && nomeAluno.trim().length >= 3) {
-          const matchedUser = findUserStmt.get(nomeAluno.trim());
-          if (matchedUser) {
-            userId = matchedUser.id;
-          }
+          const { data: matchedUser } = await supabase
+            .from('users')
+            .select('id')
+            .ilike('nome', nomeAluno.trim())
+            .eq('role', 'ESTUDANTE')
+            .maybeSingle();
+
+          if (matchedUser) userId = matchedUser.id;
         }
 
-        const extractedDataStr = typeof item.extracted_data === 'string'
-          ? item.extracted_data
-          : JSON.stringify(item.extracted_data || item.resultado || {});
+        const extractedDataObj = typeof item.extracted_data === 'string'
+          ? (JSON.parse(item.extracted_data || '{}'))
+          : (item.extracted_data || item.resultado || {});
 
-        const notaFinal = item.nota_final || item.notaFinal || (item.extracted_data?.pontuacao_geral) || 0;
+        const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.pontuacao_geral) || 0;
         const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
         const textoDigitado = item.texto_digitado || item.textoDigitado || null;
         const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
         const turmaAluno = item.turma_aluno || item.turmaAluno || 'Turma Geral';
         const nomeDetectado = item.nome_detectado ? 1 : 0;
-        
-        // Legacy items already corrected by Profa. Clara are marked VALIDADA
         const statusValidacao = item.status_validacao || 'VALIDADA';
         const validadoPor = req.user?.id || null;
         const dataValidacao = new Date().toISOString();
 
-        insertStmt.run(
-          userId,
-          nomeAluno,
-          turmaAluno,
-          nomeDetectado,
-          dataCaptura,
-          tipoInput,
-          imagemBase64,
-          textoDigitado,
-          extractedDataStr,
-          notaFinal,
-          statusValidacao,
-          validadoPor,
-          dataValidacao
-        );
-        insertedCount++;
-      }
-    });
+        const { error: insErr } = await supabase.from('redacoes').insert({
+          user_id: userId,
+          nome_aluno: nomeAluno,
+          turma_aluno: turmaAluno,
+          nome_detectado: nomeDetectado,
+          data_captura: dataCaptura,
+          tipo_input: tipoInput,
+          imagem_base64: imagemBase64,
+          texto_digitado: textoDigitado,
+          is_synced: 1,
+          extracted_data: extractedDataObj,
+          nota_final: notaFinal,
+          status_validacao: statusValidacao,
+          validado_por: validadoPor,
+          data_validacao: dataValidacao
+        });
 
-    syncTransaction(redacoes);
+        if (insErr) {
+          console.error('[Supabase Sync Insert Error]:', insErr.message);
+        } else {
+          insertedCount++;
+        }
+      }
+    } else {
+      const checkStmt = db.prepare(`
+        SELECT id FROM redacoes 
+        WHERE nome_aluno = ? AND data_captura = ?
+      `);
+
+      const findUserStmt = db.prepare(`
+        SELECT id FROM users 
+        WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?)) AND role = 'ESTUDANTE'
+      `);
+
+      const insertStmt = db.prepare(`
+        INSERT INTO redacoes (
+          user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
+          tipo_input, imagem_base64, texto_digitado, is_synced, extracted_data, nota_final,
+          status_validacao, validado_por, data_validacao
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+      `);
+
+      const syncTransaction = db.transaction((items) => {
+        for (const item of items) {
+          const nomeAluno = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
+          const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
+
+          const existing = checkStmt.get(nomeAluno, dataCaptura);
+          if (existing) {
+            skippedCount++;
+            continue;
+          }
+
+          let userId = item.user_id || null;
+          if (!userId && nomeAluno && nomeAluno.trim().length >= 3) {
+            const matchedUser = findUserStmt.get(nomeAluno.trim());
+            if (matchedUser) userId = matchedUser.id;
+          }
+
+          const extractedDataStr = typeof item.extracted_data === 'string'
+            ? item.extracted_data
+            : JSON.stringify(item.extracted_data || item.resultado || {});
+
+          const notaFinal = item.nota_final || item.notaFinal || (item.extracted_data?.pontuacao_geral) || 0;
+          const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
+          const textoDigitado = item.texto_digitado || item.textoDigitado || null;
+          const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
+          const turmaAluno = item.turma_aluno || item.turmaAluno || 'Turma Geral';
+          const nomeDetectado = item.nome_detectado ? 1 : 0;
+          const statusValidacao = item.status_validacao || 'VALIDADA';
+          const validadoPor = req.user?.id || null;
+          const dataValidacao = new Date().toISOString();
+
+          insertStmt.run(
+            userId,
+            nomeAluno,
+            turmaAluno,
+            nomeDetectado,
+            dataCaptura,
+            tipoInput,
+            imagemBase64,
+            textoDigitado,
+            extractedDataStr,
+            notaFinal,
+            statusValidacao,
+            validadoPor,
+            dataValidacao
+          );
+          insertedCount++;
+        }
+      });
+
+      syncTransaction(redacoes);
+    }
 
     res.status(200).json({
       message: `${insertedCount} correções locais sincronizadas e disponibilizadas com sucesso! (${skippedCount} já existiam)`,
@@ -100,64 +164,99 @@ export const syncLegacyRedacoes = (req, res) => {
 };
 
 // GET /api/redacoes
-export const getRedacoes = (req, res) => {
+export const getRedacoes = async (req, res) => {
   try {
     const user = req.user;
-    let rows;
+    let formatted = [];
 
-    if (user.role === 'ADMIN') {
-      // Professor/Admin sees ALL redações (both validated and pending teacher review)
-      rows = db.prepare(`
-        SELECT r.*, u.email as user_email, v.nome as nome_validador
-        FROM redacoes r
-        LEFT JOIN users u ON r.user_id = u.id
-        LEFT JOIN users v ON r.validado_por = v.id
-        ORDER BY r.data_captura DESC
-      `).all();
-    } else {
-      // Student ONLY sees redações explicitly linked to their user_id (OR exact matching student name) AND validated by teacher!
-      const cleanStudentName = (user.nome || '').trim();
-      rows = db.prepare(`
-        SELECT r.*, u.email as user_email, v.nome as nome_validador
-        FROM redacoes r
-        LEFT JOIN users u ON r.user_id = u.id
-        LEFT JOIN users v ON r.validado_por = v.id
-        WHERE (r.user_id = ? 
-           OR (r.user_id IS NULL AND LOWER(TRIM(r.nome_aluno)) = LOWER(TRIM(?))))
-          AND r.status_validacao = 'VALIDADA'
-        ORDER BY r.data_captura DESC
-      `).all(user.id, cleanStudentName);
-    }
+    if (isSupabaseConfigured) {
+      let query = supabase
+        .from('redacoes')
+        .select('*')
+        .order('data_captura', { ascending: false });
 
-    // Format output JSON
-    const formatted = rows.map(row => {
-      let extractedData = {};
-      try {
-        extractedData = JSON.parse(row.extracted_data || '{}');
-      } catch (e) {
-        extractedData = {};
+      if (user.role !== 'ADMIN') {
+        const cleanStudentName = (user.nome || '').trim();
+        query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
       }
 
-      return {
-        id: row.id,
-        user_id: row.user_id,
-        nome_aluno: row.nome_aluno,
-        turma_aluno: row.turma_aluno,
-        nome_detectado: Boolean(row.nome_detectado),
-        data_captura: row.data_captura,
-        tipo_input: row.tipo_input,
-        imagem_base64: row.imagem_base64,
-        texto_digitado: row.texto_digitado,
-        is_synced: Boolean(row.is_synced),
-        extracted_data: extractedData,
-        nota_final: row.nota_final,
-        status_validacao: row.status_validacao || 'VALIDADA',
-        validado_por: row.validado_por,
-        nome_validador: row.nome_validador,
-        data_validacao: row.data_validacao,
-        user_email: row.user_email
-      };
-    });
+      const { data, error } = await query;
+      if (error) {
+        console.error('[Supabase GetRedacoes Error]:', error.message);
+      } else {
+        formatted = (data || []).map(r => ({
+          id: r.id,
+          user_id: r.user_id,
+          nome_aluno: r.nome_aluno,
+          turma_aluno: r.turma_aluno,
+          nome_detectado: Boolean(r.nome_detectado),
+          data_captura: r.data_captura,
+          tipo_input: r.tipo_input,
+          imagem_base64: r.imagem_base64,
+          texto_digitado: r.texto_digitado,
+          is_synced: Boolean(r.is_synced),
+          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+          nota_final: r.nota_final,
+          status_validacao: r.status_validacao || 'VALIDADA',
+          validado_por: r.validado_por,
+          data_validacao: r.data_validacao
+        }));
+      }
+    }
+
+    if (formatted.length === 0 && !isSupabaseConfigured) {
+      let rows;
+      if (user.role === 'ADMIN') {
+        rows = db.prepare(`
+          SELECT r.*, u.email as user_email, v.nome as nome_validador
+          FROM redacoes r
+          LEFT JOIN users u ON r.user_id = u.id
+          LEFT JOIN users v ON r.validado_por = v.id
+          ORDER BY r.data_captura DESC
+        `).all();
+      } else {
+        const cleanStudentName = (user.nome || '').trim();
+        rows = db.prepare(`
+          SELECT r.*, u.email as user_email, v.nome as nome_validador
+          FROM redacoes r
+          LEFT JOIN users u ON r.user_id = u.id
+          LEFT JOIN users v ON r.validado_por = v.id
+          WHERE (r.user_id = ? 
+             OR (r.user_id IS NULL AND LOWER(TRIM(r.nome_aluno)) = LOWER(TRIM(?))))
+            AND r.status_validacao = 'VALIDADA'
+          ORDER BY r.data_captura DESC
+        `).all(user.id, cleanStudentName);
+      }
+
+      formatted = rows.map(row => {
+        let extractedData = {};
+        try {
+          extractedData = JSON.parse(row.extracted_data || '{}');
+        } catch (e) {
+          extractedData = {};
+        }
+
+        return {
+          id: row.id,
+          user_id: row.user_id,
+          nome_aluno: row.nome_aluno,
+          turma_aluno: row.turma_aluno,
+          nome_detectado: Boolean(row.nome_detectado),
+          data_captura: row.data_captura,
+          tipo_input: row.tipo_input,
+          imagem_base64: row.imagem_base64,
+          texto_digitado: row.texto_digitado,
+          is_synced: Boolean(row.is_synced),
+          extracted_data: extractedData,
+          nota_final: row.nota_final,
+          status_validacao: row.status_validacao || 'VALIDADA',
+          validado_por: row.validado_por,
+          nome_validador: row.nome_validador,
+          data_validacao: row.data_validacao,
+          user_email: row.user_email
+        };
+      });
+    }
 
     res.status(200).json({ redacoes: formatted });
   } catch (error) {
@@ -167,7 +266,7 @@ export const getRedacoes = (req, res) => {
 };
 
 // POST /api/redacoes
-export const createRedacao = (req, res) => {
+export const createRedacao = async (req, res) => {
   try {
     const {
       user_id,
@@ -182,6 +281,51 @@ export const createRedacao = (req, res) => {
     } = req.body;
 
     let targetUserId = user_id || null;
+    const initialStatus = status_validacao || (req.user?.role === 'ADMIN' ? 'VALIDADA' : 'PENDENTE_VALIDACAO');
+    const validadoPor = initialStatus === 'VALIDADA' ? req.user?.id : null;
+    const dataValidacao = initialStatus === 'VALIDADA' ? new Date().toISOString() : null;
+
+    if (isSupabaseConfigured) {
+      if (!targetUserId && nome_aluno && nome_aluno.trim().length >= 3) {
+        const { data: matched } = await supabase
+          .from('users')
+          .select('id')
+          .ilike('nome', nome_aluno.trim())
+          .eq('role', 'ESTUDANTE')
+          .maybeSingle();
+
+        if (matched) targetUserId = matched.id;
+      }
+
+      const { data, error } = await supabase
+        .from('redacoes')
+        .insert({
+          user_id: targetUserId,
+          nome_aluno: nome_aluno || 'Aluno Não Identificado',
+          turma_aluno: turma_aluno || 'Geral',
+          nome_detectado: 1,
+          tipo_input: tipo_input || 'imagem',
+          imagem_base64: imagem_base64 || null,
+          texto_digitado: texto_digitado || null,
+          is_synced: 1,
+          extracted_data: extracted_data || {},
+          nota_final: nota_final || (extracted_data?.pontuacao_geral) || 0,
+          status_validacao: initialStatus,
+          validado_por: validadoPor,
+          data_validacao: dataValidacao
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      return res.status(201).json({
+        message: 'Redação registrada com sucesso!',
+        id: data.id,
+        status_validacao: initialStatus
+      });
+    }
+
     if (!targetUserId && nome_aluno && nome_aluno.trim().length >= 3) {
       const cleanName = nome_aluno.trim();
       const matched = db.prepare(`
@@ -195,11 +339,6 @@ export const createRedacao = (req, res) => {
     const extractedDataStr = typeof extracted_data === 'string'
       ? extracted_data
       : JSON.stringify(extracted_data || {});
-
-    // Default status: if uploaded by Admin directly, set to VALIDADA or PENDENTE_VALIDACAO
-    const initialStatus = status_validacao || (req.user?.role === 'ADMIN' ? 'VALIDADA' : 'PENDENTE_VALIDACAO');
-    const validadoPor = initialStatus === 'VALIDADA' ? req.user?.id : null;
-    const dataValidacao = initialStatus === 'VALIDADA' ? new Date().toISOString() : null;
 
     const result = db.prepare(`
       INSERT INTO redacoes (
@@ -233,11 +372,49 @@ export const createRedacao = (req, res) => {
 };
 
 // PATCH /api/redacoes/:id/vincular
-// Professor explicitly links a redação to a registered student account
-export const vincularAlunoRedacao = (req, res) => {
+export const vincularAlunoRedacao = async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id, nome_aluno, turma_aluno } = req.body;
+
+    if (isSupabaseConfigured) {
+      let finalUserId = user_id || null;
+      let finalNomeAluno = nome_aluno || null;
+      let finalTurmaAluno = turma_aluno || null;
+
+      if (user_id) {
+        const { data: st } = await supabase
+          .from('users')
+          .select('id, nome, turma')
+          .eq('id', user_id)
+          .maybeSingle();
+
+        if (st) {
+          finalUserId = st.id;
+          finalNomeAluno = st.nome;
+          finalTurmaAluno = st.turma || finalTurmaAluno;
+        }
+      }
+
+      const { error } = await supabase
+        .from('redacoes')
+        .update({
+          user_id: finalUserId,
+          nome_aluno: finalNomeAluno,
+          turma_aluno: finalTurmaAluno,
+          nome_detectado: 1
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return res.status(200).json({
+        message: `Redação ID #${id} vinculada ao aluno ${finalNomeAluno} com sucesso!`,
+        user_id: finalUserId,
+        nome_aluno: finalNomeAluno,
+        turma_aluno: finalTurmaAluno
+      });
+    }
 
     const redacao = db.prepare('SELECT * FROM redacoes WHERE id = ?').get(id);
     if (!redacao) {
@@ -277,11 +454,53 @@ export const vincularAlunoRedacao = (req, res) => {
 };
 
 // PATCH /api/redacoes/:id/validar
-// Professor validates/approves AI correction and releases it to the student
-export const validarRedacao = (req, res) => {
+export const validarRedacao = async (req, res) => {
   try {
     const { id } = req.params;
     const { nota_final, extracted_data, parecer_professor } = req.body;
+
+    if (isSupabaseConfigured) {
+      const { data: current } = await supabase
+        .from('redacoes')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!current) {
+        return res.status(404).json({ error: 'Redação não encontrada.' });
+      }
+
+      let updatedExtractedData = typeof current.extracted_data === 'string'
+        ? JSON.parse(current.extracted_data || '{}')
+        : (current.extracted_data || {});
+
+      if (extracted_data) {
+        updatedExtractedData = { ...updatedExtractedData, ...extracted_data };
+      }
+      if (parecer_professor) {
+        updatedExtractedData.parecer_professor = parecer_professor;
+      }
+
+      const finalNota = typeof nota_final === 'number' ? nota_final : current.nota_final;
+
+      const { error } = await supabase
+        .from('redacoes')
+        .update({
+          status_validacao: 'VALIDADA',
+          validado_por: req.user.id,
+          data_validacao: new Date().toISOString(),
+          nota_final: finalNota,
+          extracted_data: updatedExtractedData
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return res.status(200).json({
+        message: 'Correção validada com sucesso pelo professor! Liberada para o aluno.',
+        status_validacao: 'VALIDADA'
+      });
+    }
 
     const current = db.prepare('SELECT * FROM redacoes WHERE id = ?').get(id);
     if (!current) {
@@ -327,8 +546,14 @@ export const validarRedacao = (req, res) => {
 };
 
 // DELETE /api/redacoes/clear-all (Admin wipes all redações)
-export const deleteAllRedacoes = (req, res) => {
+export const deleteAllRedacoes = async (req, res) => {
   try {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('redacoes').delete().neq('id', 0);
+      if (error) throw error;
+      return res.status(200).json({ message: 'Todas as redações foram apagadas com sucesso.' });
+    }
+
     const result = db.prepare('DELETE FROM redacoes').run();
     res.status(200).json({
       message: 'Todas as redações foram apagadas com sucesso.',
@@ -341,9 +566,16 @@ export const deleteAllRedacoes = (req, res) => {
 };
 
 // DELETE /api/redacoes/:id
-export const deleteRedacao = (req, res) => {
+export const deleteRedacao = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('redacoes').delete().eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ message: 'Redação excluída com sucesso.' });
+    }
+
     db.prepare('DELETE FROM redacoes WHERE id = ?').run(id);
     res.status(200).json({ message: 'Redação excluída com sucesso.' });
   } catch (error) {
@@ -353,11 +585,20 @@ export const deleteRedacao = (req, res) => {
 };
 
 // GET /api/export-db or /api/redacoes/export-db
-// Exports full SQLite DB (users + redacoes) as JSON backup download
-export const exportDatabase = (req, res) => {
+export const exportDatabase = async (req, res) => {
   try {
-    const users = db.prepare('SELECT id, nome, email, senha_hash, role, turma, created_at FROM users').all();
-    const redacoes = db.prepare('SELECT * FROM redacoes').all();
+    let users = [];
+    let redacoes = [];
+
+    if (isSupabaseConfigured) {
+      const { data: uData } = await supabase.from('users').select('*');
+      const { data: rData } = await supabase.from('redacoes').select('*');
+      users = uData || [];
+      redacoes = rData || [];
+    } else {
+      users = db.prepare('SELECT id, nome, email, senha_hash, role, turma, created_at FROM users').all();
+      redacoes = db.prepare('SELECT * FROM redacoes').all();
+    }
 
     const formattedRedacoes = redacoes.map(r => {
       let ext = r.extracted_data;
@@ -388,4 +629,3 @@ export const exportDatabase = (req, res) => {
     return res.status(500).json({ error: 'Falha ao exportar banco de dados.', details: error.message });
   }
 };
-
