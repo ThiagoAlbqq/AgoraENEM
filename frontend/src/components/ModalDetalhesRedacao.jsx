@@ -137,6 +137,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           useCORS: true, 
           logging: false,
           letterRendering: true,
+          scrollX: 0,
+          scrollY: 0,
           windowWidth: 794 // Exact 210mm width at 96dpi
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -146,7 +148,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
-      window.print();
+      alert('Não foi possível gerar o arquivo PDF automaticamente. Por favor, tente novamente.');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -963,8 +965,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
         </div>
       </div>
 
-      {/* HIDDEN PDF TEMPLATE (RENDERED OFF-SCREEN ONLY WHEN USER CLICKS DOWNLOAD PDF) */}
-      <div className="fixed top-0 -left-[9999px] pointer-events-none z-[-100]">
+      {/* HIDDEN PDF TEMPLATE (RENDERED IN VIEWPORT WITH OPACITY 0 FOR HTML2CANVAS CAPTURE) */}
+      <div className="fixed top-0 left-0 opacity-0 pointer-events-none z-[-9999]">
         {renderMinimalistOfficialSheet()}
       </div>
 
