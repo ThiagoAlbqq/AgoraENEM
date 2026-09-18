@@ -200,6 +200,23 @@ export const authService = {
     return data;
   },
 
+  async deleteCloudRedacao(id) {
+    const token = this.getToken();
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const response = await fetch(`${API_BASE}/redacoes/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Erro ao excluir redação no servidor.');
+    }
+
+    return true;
+  },
+
   async clearAllRedacoes() {
     const token = this.getToken();
     if (!token) throw new Error('Apenas professores autenticados podem apagar redações.');

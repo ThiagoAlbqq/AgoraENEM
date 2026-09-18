@@ -584,14 +584,27 @@ export const deleteRedacao = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('redacoes').delete().eq('id', id);
-      if (error) throw error;
-      return res.status(200).json({ message: 'Redação excluída com sucesso.' });
+    if (req.user && req.user.role === 'ESTUDANTE') {
+      return res.status(403).json({ error: 'Apenas professores/administradores podem excluir redações.' });
     }
 
-    db.prepare('DELETE FROM redacoes WHERE id = ?').run(id);
-    res.status(200).json({ message: 'Redação excluída com sucesso.' });
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('redacoes').delete().eq('id', id);
+      if (error) {
+        console.error('[Delete Redacao Supabase Error]:', error.message);
+        throw error;
+      }
+    }
+
+    if (db) {
+      try {
+        db.prepare('DELETE FROM redacoes WHERE id = ?').run(id);
+      } catch (dbErr) {
+        console.warn('[Delete Redacao SQLite Warning]:', dbErr.message);
+      }
+    }
+
+    return res.status(200).json({ message: 'Redação excluída com sucesso do banco de dados.' });
   } catch (error) {
     console.error('[Delete Redacao Error]:', error);
     res.status(500).json({ error: 'Erro ao excluir redação.' });

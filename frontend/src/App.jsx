@@ -131,8 +131,17 @@ function AppContent() {
 
   const handleDeleteRedacao = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta redação?')) {
-      await deleteRedacao(id);
-      loadRedacoes();
+      try {
+        await deleteRedacao(id).catch(() => {});
+        await authService.deleteCloudRedacao(id).catch(err => {
+          console.warn('Aviso ao excluir na nuvem:', err.message);
+        });
+        showToast('Redação excluída com sucesso!', 'success');
+        await loadRedacoes();
+      } catch (error) {
+        console.error('Erro ao excluir redação:', error);
+        showToast(`Erro ao excluir: ${error.message}`, 'error');
+      }
     }
   };
 
