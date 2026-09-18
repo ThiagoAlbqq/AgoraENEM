@@ -86,7 +86,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       items: [
         { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
         { id: 'tabela', label: 'Banco de Redações', icon: Database },
-        { id: 'sem_nome', label: 'Redações Sem Nome', icon: AlertTriangle, badge: unidentifiedCount }
+        { id: 'sem_nome', label: 'Vincular Alunos (Pendentes)', icon: AlertTriangle, badge: unidentifiedCount }
       ]
     },
     {

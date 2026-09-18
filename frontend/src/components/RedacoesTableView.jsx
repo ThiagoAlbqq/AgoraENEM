@@ -249,7 +249,19 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {isAdmin && !item.user_id && (
+                        <button
+                          type="button"
+                          onClick={() => item.is_synced && onSelectRedacao(item)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          title="Vincular a um aluno"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                          <span>Vincular Aluno</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => item.is_synced && onSelectRedacao(item)}

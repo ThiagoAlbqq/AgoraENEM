@@ -264,6 +264,7 @@ function AppContent() {
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onNavigateToUpload={() => handleSetActiveView('novo')}
                   onNavigateToRanking={() => handleSetActiveView('ranking')}
+                  onNavigateToSemNome={() => handleSetActiveView('sem_nome')}
                 />
               )}
 

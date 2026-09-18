@@ -40,6 +40,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [isStudentPickerOpen, setIsStudentPickerOpen] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [studentTurmaFilter, setStudentTurmaFilter] = useState('todas');
+  const [pickerTab, setPickerTab] = useState('search'); // 'search' | 'create'
+  const [novoNome, setNovoNome] = useState('');
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novoTurma, setNovoTurma] = useState('3° G - TARDE');
+  const [isCreatingStudent, setIsCreatingStudent] = useState(false);
 
   React.useEffect(() => {
     if (isAdmin) {
@@ -78,6 +83,37 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       alert(err.message || 'Erro ao vincular aluno.');
     } finally {
       setIsLinkingStudent(false);
+    }
+  };
+
+  const handleCreateAndLinkStudent = async (e) => {
+    e.preventDefault();
+    if (!novoNome.trim() || !novoEmail.trim()) {
+      alert('Por favor, preencha o nome e o e-mail do estudante.');
+      return;
+    }
+    setIsCreatingStudent(true);
+    try {
+      const newStudent = await authService.createEstudante({
+        nome: novoNome.trim(),
+        email: novoEmail.trim().toLowerCase(),
+        turma: novoTurma
+      });
+      
+      // Atualiza a lista local
+      setEstudantesList(prev => [...prev, newStudent]);
+      
+      // Vincula à redação atual
+      await handleVincularAluno(newStudent.id);
+      setIsStudentPickerOpen(false);
+      setPickerTab('search');
+      setNovoNome('');
+      setNovoEmail('');
+      alert(`🎉 Aluno ${newStudent.nome} cadastrado e vinculado com sucesso!`);
+    } catch (err) {
+      alert(err.message || 'Erro ao cadastrar novo estudante.');
+    } finally {
+      setIsCreatingStudent(false);
     }
   };
 
@@ -984,12 +1020,12 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-3">
               <div>
-                <h4 className="text-base font-normal tracking-tight text-[#26251e] flex items-center gap-2">
+                <h4 className="text-base font-semibold tracking-tight text-[#26251e] flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-[#f54e00]" />
-                  Vincular Redação a Aluno Cadastrado
+                  Central de Vínculo de Alunos
                 </h4>
                 <p className="text-xs text-[#807d72] mt-0.5">
-                  Selecione o aluno que receberá esta avaliação em seu portal individual.
+                  Atribua esta avaliação para o portal do aluno correspondente ou cadastre um novo.
                 </p>
               </div>
               <button
@@ -1000,117 +1036,241 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               </button>
             </div>
 
-            {/* Search & Turma Filter Controls */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar por nome ou e-mail..."
-                  value={studentSearchQuery}
-                  onChange={(e) => setStudentSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
-                />
-              </div>
-
-              {/* Turma Filter Select */}
-              <div className="sm:w-44 shrink-0">
-                <select
-                  value={studentTurmaFilter}
-                  onChange={(e) => setStudentTurmaFilter(e.target.value)}
-                  className="w-full py-2 px-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] focus:outline-none focus:border-[#26251e] cursor-pointer"
-                >
-                  <option value="todas">Todas as Salas</option>
-                  {Array.from(new Set(estudantesList.map(e => e.turma).filter(Boolean))).sort().map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Options List */}
-            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-              <div
-                onClick={() => { handleVincularAluno(''); setIsStudentPickerOpen(false); }}
-                className={`p-3 rounded-lg border border-[#e6e5e0] transition-all cursor-pointer flex items-center justify-between ${
-                  !selectedStudentId ? 'bg-[#f7f7f4] border-[#cfcdc4]' : 'bg-[#ffffff] hover:bg-[#fafaf7]'
+            {/* Sub-Tabs: Buscar vs Cadastrar Novo */}
+            <div className="flex items-center gap-1 p-1 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setPickerTab('search')}
+                className={`flex-1 py-1.5 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  pickerTab === 'search'
+                    ? 'bg-[#ffffff] text-[#26251e] shadow-xs font-semibold'
+                    : 'text-[#807d72] hover:text-[#26251e]'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Unlink className="w-4 h-4 text-[#807d72]" />
+                <Search className="w-3.5 h-3.5" />
+                <span>Buscar Aluno Cadastrado ({estudantesList.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPickerTab('create')}
+                className={`flex-1 py-1.5 px-3 rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  pickerTab === 'create'
+                    ? 'bg-[#ffffff] text-[#f54e00] shadow-xs font-semibold'
+                    : 'text-[#807d72] hover:text-[#26251e]'
+                }`}
+              >
+                <span className="text-base leading-none font-bold">+</span>
+                <span>Cadastrar Novo Aluno</span>
+              </button>
+            </div>
+
+            {pickerTab === 'create' ? (
+              /* FORM: CADASTRAR NOVO ALUNO */
+              <form onSubmit={handleCreateAndLinkStudent} className="space-y-3.5 bg-[#fafaf7] border border-[#e6e5e0] p-4 rounded-xl">
+                <div className="text-xs font-semibold text-[#26251e] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#f54e00]" />
+                  <span>Cadastrar estudante fora da lista e vincular agora:</span>
+                </div>
+
+                <div className="space-y-2.5">
                   <div>
-                    <span className="text-xs font-medium text-[#26251e] block">Não Vincular a Conta</span>
-                    <span className="text-[10px] font-mono text-[#807d72]">Manter com nome manual e sem envio para portal de aluno</span>
+                    <label className="text-[11px] font-mono text-[#807d72] block mb-1">Nome Completo do Aluno:</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: GUILHERME RIBAS DE SOUSA"
+                      value={novoNome}
+                      onChange={(e) => {
+                        setNovoNome(e.target.value);
+                        if (!novoEmail && e.target.value.trim()) {
+                          const simple = e.target.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '.');
+                          setNovoEmail(`${simple}@aluno.ce.gov.br`);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-mono text-[#807d72] block mb-1">E-mail Institucional:</label>
+                      <input
+                        type="email"
+                        placeholder="nome.sobrenome@aluno.ce.gov.br"
+                        value={novoEmail}
+                        onChange={(e) => setNovoEmail(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-mono text-[#807d72] block mb-1">Turma / Sala:</label>
+                      <select
+                        value={novoTurma}
+                        onChange={(e) => setNovoTurma(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] focus:outline-none focus:border-[#26251e] cursor-pointer"
+                      >
+                        {[
+                          '1° A - INTEGRAL', '1° B - INTEGRAL', '1° C - INTEGRAL', '1° D - INTEGRAL', '1° E - INTEGRAL', '1° F - INTEGRAL',
+                          '2° A - MANHÃ', '2° B - MANHÃ', '2° C - MANHÃ', '2° D - TARDE', '2° E - TARDE', '2° F - TARDE',
+                          '3° A - MANHÃ', '3° B - MANHÃ', '3° C - MANHÃ', '3° D - MANHÃ', '3° E - TARDE', '3° F - TARDE', '3° G - TARDE'
+                        ].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-[#807d72] font-mono bg-[#ffffff] p-2.5 rounded border border-[#e6e5e0]">
+                    💡 O estudante receberá a senha padrão inicial <strong>Agora@2026</strong> para entrar em seu portal e consultar a nota desta redação.
                   </div>
                 </div>
-                {!selectedStudentId && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#e6e5e0] text-[#26251e]">
-                    SELECIONADO
-                  </span>
-                )}
-              </div>
 
-              {(() => {
-                const filteredEstudantes = estudantesList.filter(est => {
-                  if (studentTurmaFilter !== 'todas' && (est.turma || '').toLowerCase() !== studentTurmaFilter.toLowerCase()) {
-                    return false;
-                  }
-                  const query = studentSearchQuery.toLowerCase().trim();
-                  if (!query) return true;
-                  return (
-                    (est.nome || '').toLowerCase().includes(query) ||
-                    (est.email || '').toLowerCase().includes(query) ||
-                    (est.turma || '').toLowerCase().includes(query)
-                  );
-                });
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPickerTab('search')}
+                    className="px-3 py-1.5 bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] text-xs font-medium rounded-md hover:bg-[#e6e5e0] cursor-pointer"
+                  >
+                    Voltar para Busca
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingStudent || !novoNome.trim() || !novoEmail.trim()}
+                    className="px-4 py-1.5 bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isCreatingStudent ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>Cadastrar & Vincular Agora</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* SEARCH & SELECT EXISTING STUDENT */
+              <>
+                {/* Search & Turma Filter Controls */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Pesquisar por nome ou e-mail..."
+                      value={studentSearchQuery}
+                      onChange={(e) => setStudentSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+                    />
+                  </div>
 
-                if (filteredEstudantes.length === 0) {
-                  return (
-                    <div className="p-4 text-center text-xs text-[#807d72] font-mono bg-[#fafaf7] rounded-md border border-[#e6e5e0]">
-                      Nenhum estudante cadastrado encontrado.
-                    </div>
-                  );
-                }
-
-                return filteredEstudantes.map((est) => {
-                  const isSelected = String(selectedStudentId) === String(est.id);
-                  return (
-                    <div
-                      key={est.id}
-                      onClick={() => { handleVincularAluno(est.id); setIsStudentPickerOpen(false); }}
-                      className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-[#9fc9a2]/20 border-[#9fc9a2]'
-                          : 'bg-[#ffffff] border-[#e6e5e0] hover:bg-[#fafaf7]'
-                      }`}
+                  {/* Turma Filter Select */}
+                  <div className="sm:w-44 shrink-0">
+                    <select
+                      value={studentTurmaFilter}
+                      onChange={(e) => setStudentTurmaFilter(e.target.value)}
+                      className="w-full py-2 px-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] focus:outline-none focus:border-[#26251e] cursor-pointer"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#e6e5e0] flex items-center justify-center shrink-0">
-                          <GraduationCap className="w-4 h-4 text-[#26251e]" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-[#26251e]">{est.nome}</div>
-                          <div className="text-[10px] font-mono text-[#807d72]">{est.email} • {est.turma || 'Sem Turma'}</div>
-                        </div>
-                      </div>
+                      <option value="todas">Todas as Salas</option>
+                      {Array.from(new Set(estudantesList.map(e => e.turma).filter(Boolean))).sort().map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-                      {isSelected ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-[#9fc9a2] text-[#26251e]">
-                          ✓ VINCULADO
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="px-2.5 py-1 bg-[#f54e00] hover:bg-[#d04200] text-white text-[10px] font-medium uppercase tracking-wider rounded-md transition-colors cursor-pointer"
-                        >
-                          Vincular
-                        </button>
-                      )}
+                {/* Options List */}
+                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                  <div
+                    onClick={() => { handleVincularAluno(''); setIsStudentPickerOpen(false); }}
+                    className={`p-3 rounded-lg border border-[#e6e5e0] transition-all cursor-pointer flex items-center justify-between ${
+                      !selectedStudentId ? 'bg-[#f7f7f4] border-[#cfcdc4]' : 'bg-[#ffffff] hover:bg-[#fafaf7]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Unlink className="w-4 h-4 text-[#807d72]" />
+                      <div>
+                        <span className="text-xs font-medium text-[#26251e] block">Não Vincular a Conta</span>
+                        <span className="text-[10px] font-mono text-[#807d72]">Manter com nome manual e sem envio para portal de aluno</span>
+                      </div>
                     </div>
-                  );
-                });
-              })()}
-            </div>
+                    {!selectedStudentId && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#e6e5e0] text-[#26251e]">
+                        SELECIONADO
+                      </span>
+                    )}
+                  </div>
+
+                  {(() => {
+                    const filteredEstudantes = estudantesList.filter(est => {
+                      if (studentTurmaFilter !== 'todas' && (est.turma || '').toLowerCase() !== studentTurmaFilter.toLowerCase()) {
+                        return false;
+                      }
+                      const query = studentSearchQuery.toLowerCase().trim();
+                      if (!query) return true;
+                      return (
+                        (est.nome || '').toLowerCase().includes(query) ||
+                        (est.email || '').toLowerCase().includes(query) ||
+                        (est.turma || '').toLowerCase().includes(query)
+                      );
+                    });
+
+                    if (filteredEstudantes.length === 0) {
+                      return (
+                        <div className="p-4 text-center text-xs text-[#807d72] font-mono bg-[#fafaf7] rounded-md border border-[#e6e5e0] space-y-2">
+                          <p>Nenhum estudante encontrado com este filtro.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPickerTab('create');
+                              setNovoNome(studentSearchQuery);
+                            }}
+                            className="text-xs font-semibold text-[#f54e00] hover:underline"
+                          >
+                            + Cadastrar "{studentSearchQuery || 'Novo Aluno'}" agora
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return filteredEstudantes.map((est) => {
+                      const isSelected = String(selectedStudentId) === String(est.id);
+                      return (
+                        <div
+                          key={est.id}
+                          onClick={() => { handleVincularAluno(est.id); setIsStudentPickerOpen(false); }}
+                          className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-[#9fc9a2]/20 border-[#9fc9a2]'
+                              : 'bg-[#ffffff] border-[#e6e5e0] hover:bg-[#fafaf7]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#e6e5e0] flex items-center justify-center shrink-0">
+                              <GraduationCap className="w-4 h-4 text-[#26251e]" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold text-[#26251e]">{est.nome}</div>
+                              <div className="text-[10px] font-mono text-[#807d72]">{est.email} • {est.turma || 'Sem Turma'}</div>
+                            </div>
+                          </div>
+
+                          {isSelected ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-[#9fc9a2] text-[#26251e]">
+                              ✓ VINCULADO
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="px-2.5 py-1 bg-[#f54e00] hover:bg-[#d04200] text-white text-[10px] font-medium uppercase tracking-wider rounded-md transition-colors cursor-pointer"
+                            >
+                              Vincular
+                            </button>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </>
+            )}
 
             {/* Modal Footer */}
             <div className="pt-2 border-t border-[#e6e5e0] flex justify-end">

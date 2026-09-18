@@ -83,6 +83,26 @@ export const authService = {
     return data.estudantes || [];
   },
 
+  async createEstudante(studentData) {
+    const token = this.getToken();
+    if (!token) throw new Error('É necessário estar autenticado como Admin.');
+
+    const response = await fetch(`${API_BASE}/auth/estudantes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(studentData)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Erro ao cadastrar estudante.');
+    }
+    return data.estudante;
+  },
+
   async syncLegacyToCloud(onProgress) {
     const token = this.getToken();
     if (!token) throw new Error('É necessário estar autenticado como Admin para subir as correções.');

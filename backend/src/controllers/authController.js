@@ -238,3 +238,55 @@ export const getEstudantes = async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar estudantes.' });
   }
 };
+
+// POST /api/auth/estudantes (Admin create new student on the fly)
+export const createEstudante = async (req, res) => {
+  try {
+    const { nome, email, turma, senha } = req.body;
+    if (!nome || !email) {
+      return res.status(400).json({ error: 'Nome e e-mail institucional são obrigatórios.' });
+    }
+
+    const cleanNome = nome.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanTurma = (turma || 'Geral').trim();
+    const senhaFinal = senha || 'Agora@2026';
+    const senhaHash = bcrypt.hashSync(senhaFinal, 10);
+
+    let newStudent = null;
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .upsert({
+          nome: cleanNome,
+          email: cleanEmail,
+          turma: cleanTurma,
+          role: 'ESTUDANTE',
+          senha_hash: senhaHash
+        }, { onConflict: 'email' })
+        .select('id, nome, email, turma, role')
+        .single();
+
+      if (error) {
+        console.error('[Supabase CreateEstudante Error]:', error.message);
+        return res.status(400).json({ error: 'Erro ao cadastrar estudante no Supabase: ' + error.message });
+      }
+      newStudent = data;
+    } else if (db) {
+      const info = db.prepare(`
+        INSERT INTO users (nome, email, senha_hash, role, turma)
+        VALUES (?, ?, ?, 'ESTUDANTE', ?)
+      `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
+      newStudent = { id: info.lastInsertRowid, nome: cleanNome, email: cleanEmail, turma: cleanTurma, role: 'ESTUDANTE' };
+    }
+
+    res.status(201).json({
+      message: 'Estudante cadastrado com sucesso!',
+      estudante: newStudent
+    });
+  } catch (error) {
+    console.error('[Auth CreateEstudante Error]:', error);
+    res.status(500).json({ error: 'Erro ao cadastrar estudante.' });
+  }
+};

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3, Trophy, Crown, Medal, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking }) {
+export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome }) {
   const { user, isAdmin } = useAuth();
 
   const totalCount = redacoes.length;
@@ -22,8 +22,8 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
     ? (correctedList[0]?.nota_final || 0)
     : 0;
 
-  const identifiedCount = redacoes.filter(r => r.is_synced && r.nome_detectado && r.nome_aluno).length;
-  const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.nome_detectado || !r.nome_aluno)).length;
+  const identifiedCount = redacoes.filter(r => r.is_synced && r.user_id && r.nome_aluno).length;
+  const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.user_id || !r.nome_aluno)).length;
 
   // Compute average per ENEM competency C1-C5
   const calcCompAvg = (key) => {
@@ -116,6 +116,37 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
         </div>
       </div>
 
+      {/* ADMIN ATTENTION BANNER: Unlinked Essays Pending */}
+      {isAdmin && unidentifiedCount > 0 && onNavigateToSemNome && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-200 border border-amber-400 flex items-center justify-center text-amber-800 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                <span>{unidentifiedCount} Redação(ões) Aguardando Vínculo</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-200 text-amber-900 uppercase">
+                  Ação Necessária
+                </span>
+              </h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Existem redações avaliadas sem aluno vinculado. Vincule-as à lista oficial de estudantes ou cadastre novos alunos para que eles visualizem a nota.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onNavigateToSemNome}
+            className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+          >
+            <span>Resolver Vínculos Pendentes</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Main KPI Stat Cards */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
@@ -154,24 +185,36 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
 
           <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Alunos Identificados</span>
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Alunos Vinculados</span>
               <div className="p-2 rounded-lg bg-[#9fc9a2]/20 border border-[#9fc9a2] text-[#1f8a65]">
                 <UserCheck className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{identifiedCount}</div>
-            <div className="text-[11px] text-[#807d72] mt-1 font-mono">vinculados a nome e turma</div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">vinculados a portal individual</div>
           </div>
 
-          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl hover:border-[#d0cecb] transition-colors shadow-xs">
+          <div 
+            onClick={onNavigateToSemNome}
+            className={`bg-[#ffffff] border p-4 sm:p-5 rounded-xl transition-all shadow-xs ${
+              unidentifiedCount > 0 ? 'border-amber-300 hover:border-amber-400 bg-amber-50/20 cursor-pointer' : 'border-[#e6e5e0]'
+            }`}
+          >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Sem Nome (Guardadas)</span>
+              <span className="text-xs font-medium text-[#807d72] uppercase tracking-wider">Sem Vínculo (Pendentes)</span>
               <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
                 <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e]">{unidentifiedCount}</div>
-            <div className="text-[11px] text-[#807d72] mt-1 font-mono">necessitam atribuição de nome</div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#26251e] flex items-center justify-between">
+              <span>{unidentifiedCount}</span>
+              {unidentifiedCount > 0 && (
+                <span className="text-[11px] font-sans font-medium text-amber-700 underline">
+                  Vincular ➔
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-[#807d72] mt-1 font-mono">aguardando vínculo com aluno</div>
           </div>
         </div>
       ) : (
