@@ -97,30 +97,52 @@
 
 /* Official Print / PDF Styling (PRISMA Institutional Document Design) */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
   body {
     background-color: #ffffff !important;
-    color: #26251e !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* Hide UI elements during print */
-  aside, header, nav, button, form, .no-print, [role="dialog"] > div > div:first-child button {
-    display: none !important;
+  /* Hide all app chrome during print */
+  body * {
+    visibility: hidden;
   }
 
-  /* Force print document display */
-  .print\:block {
-    display: block !important;
+  /* Show only the official sheet pages */
+  #pdf-print-container, #pdf-print-container * {
+    visibility: visible;
   }
 
-  #print-official-sheet {
+  #pdf-print-container {
     display: block !important;
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    width: 210mm;
     margin: 0;
-    padding: 24px;
+    padding: 0;
     background: #ffffff !important;
-    z-index: 999999;
+    z-index: 9999999;
+  }
+
+  .folha-pagina {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .folha-pagina-2 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 }
