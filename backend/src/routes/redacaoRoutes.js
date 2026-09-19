@@ -2,6 +2,7 @@ import express from 'express';
 import {
   syncLegacyRedacoes,
   getRedacoes,
+  getRedacaoById,
   getRanking,
   createRedacao,
   vincularAlunoRedacao,
@@ -19,6 +20,7 @@ router.get('/export', exportDatabase);
 router.get('/ranking', optionalAuthenticate, getRanking);
 router.post('/sync-legacy', authenticate, syncLegacyRedacoes);
 router.get('/', optionalAuthenticate, getRedacoes);
+router.get('/:id', optionalAuthenticate, getRedacaoById);
 router.post('/', authenticate, createRedacao);
 router.patch('/:id/vincular', authenticate, requireAdmin, vincularAlunoRedacao);
 router.patch('/:id/validar', authenticate, requireAdmin, validarRedacao);

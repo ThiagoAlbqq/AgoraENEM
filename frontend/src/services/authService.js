@@ -201,6 +201,22 @@ export const authService = {
     }
   },
 
+  async fetchRedacaoById(id) {
+    const token = this.getToken();
+    const headers = {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/redacoes/${id}`, { headers });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (err) {
+      console.warn(`Erro ao buscar redação #${id}:`, err);
+      return null;
+    }
+  },
+
   async validarRedacao(id, payload = {}) {
     const token = this.getToken();
     if (!token) throw new Error('Apenas professores autenticados podem validar correções.');

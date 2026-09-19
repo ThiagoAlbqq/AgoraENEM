@@ -46,6 +46,24 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [novoTurma, setNovoTurma] = useState('3° G - TARDE');
   const [isCreatingStudent, setIsCreatingStudent] = useState(false);
 
+  // Carregamento sob demanda da imagem original (economiza megabytes de tráfego inicial)
+  const [imagemBase64, setImagemBase64] = useState(redacao?.imagem_base64 || null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+
+  React.useEffect(() => {
+    if (!imagemBase64 && redacao?.id && (redacao?.tipo_input === 'imagem' || !redacao?.tipo_input)) {
+      setIsLoadingImage(true);
+      authService.fetchRedacaoById(redacao.id)
+        .then(full => {
+          if (full?.imagem_base64) {
+            setImagemBase64(full.imagem_base64);
+          }
+        })
+        .catch(err => console.warn('Erro ao carregar imagem sob demanda:', err))
+        .finally(() => setIsLoadingImage(false));
+    }
+  }, [redacao?.id, redacao?.tipo_input]);
+
   React.useEffect(() => {
     if (isAdmin) {
       authService.getEstudantes().then(list => setEstudantesList(list)).catch(() => {});
@@ -635,10 +653,15 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     <ImageIcon className="w-4 h-4 text-[#26251e]" />
                     Imagem Original Enviada
                   </div>
-                  {redacao.imagem_base64 ? (
+                  {isLoadingImage ? (
+                    <div className="p-8 text-center text-[#807d72] text-xs flex flex-col items-center justify-center gap-2 bg-[#ffffff] rounded-md border border-[#e6e5e0] min-h-[160px]">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#26251e]" />
+                      <span>Carregando imagem original em alta definição...</span>
+                    </div>
+                  ) : imagemBase64 ? (
                     <div className="rounded-md overflow-hidden border border-[#e6e5e0] bg-[#ffffff] flex items-center justify-center max-h-[380px]">
                       <img
-                        src={redacao.imagem_base64}
+                        src={imagemBase64}
                         alt="Folha da Redação"
                         className="w-full h-full object-contain"
                       />

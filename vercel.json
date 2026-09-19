@@ -1,11 +1,13 @@
 {
   "version": 2,
+  "regions": ["gru1"],
   "builds": [
     {
       "src": "backend/server.js",
       "use": "@vercel/node",
       "config": {
-        "maxDuration": 60
+        "maxDuration": 60,
+        "regions": ["gru1"]
       }
     },
     {
