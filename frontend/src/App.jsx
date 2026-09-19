@@ -6,6 +6,7 @@ import UploaderView from './components/UploaderView';
 import RedacoesTableView from './components/RedacoesTableView';
 import ConfigView from './components/ConfigView';
 import RankingView from './components/RankingView';
+import ValidacaoRapidaView from './components/ValidacaoRapidaView';
 import ModalDetalhesRedacao from './components/ModalDetalhesRedacao';
 import LoginView from './components/LoginView';
 import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
@@ -17,10 +18,10 @@ import { X, Award, Loader2 } from 'lucide-react';
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
   
-  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #ranking, #novo, #config)
+  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #ranking, #novo, #validacao, #config)
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
-    const validViews = ['dashboard', 'ranking', 'novo', 'tabela', 'sem_nome', 'config'];
+    const validViews = ['dashboard', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config'];
     return validViews.includes(hash) ? hash : 'dashboard';
   };
 
@@ -129,6 +130,12 @@ function AppContent() {
     }
   };
 
+  const handleRedacaoUpdated = (updated) => {
+    if (!updated || !updated.id) return;
+    setRedacoes(prev => prev.map(r => String(r.id) === String(updated.id) ? { ...r, ...updated } : r));
+    setRankingRedacoes(prev => prev.map(r => String(r.id) === String(updated.id) ? { ...r, ...updated } : r));
+  };
+
   const pendingCount = redacoes.filter(r => !r.is_synced).length;
   const unidentifiedCount = redacoes.filter(r => !r.user_id || !r.nome_aluno).length;
 
@@ -222,7 +229,7 @@ function AppContent() {
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onNavigateToUpload={() => handleSetActiveView('novo')}
                   onNavigateToRanking={() => handleSetActiveView('ranking')}
-                  onNavigateToSemNome={() => handleSetActiveView('sem_nome')}
+                  onNavigateToSemNome={() => handleSetActiveView('validacao')}
                 />
               )}
 
@@ -235,6 +242,15 @@ function AppContent() {
 
               {activeView === 'novo' && (
                 <UploaderView onRedacaoSaved={handleRedacaoSaved} />
+              )}
+
+              {activeView === 'validacao' && (
+                <ValidacaoRapidaView
+                  redacoes={redacoes}
+                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onRedacaoUpdated={handleRedacaoUpdated}
+                  onRefresh={() => loadRedacoes(true)}
+                />
               )}
 
               {(activeView === 'tabela' || activeView === 'sem_nome') && (

@@ -14,7 +14,8 @@ import {
   WifiOff, 
   Shield,
   Download,
-  Trophy
+  Trophy,
+  UserCheck
 } from 'lucide-react';
 import { db } from '../db/db';
 import { useAuth } from '../context/AuthContext';
@@ -85,8 +86,8 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       title: 'Gestão de Redações',
       items: [
         { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
-        { id: 'tabela', label: 'Banco de Redações', icon: Database },
-        { id: 'sem_nome', label: 'Vincular Alunos (Pendentes)', icon: AlertTriangle, badge: unidentifiedCount }
+        { id: 'validacao', label: 'Validar Alunos & Turmas', icon: UserCheck, badge: unidentifiedCount },
+        { id: 'tabela', label: 'Banco de Redações', icon: Database }
       ]
     },
     {
