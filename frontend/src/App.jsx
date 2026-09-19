@@ -32,7 +32,6 @@ function AppContent() {
   const [rankingRedacoes, setRankingRedacoes] = useState([]);
   const [isLoadingRedacoes, setIsLoadingRedacoes] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedRedacao, setSelectedRedacao] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState('todas');
@@ -167,8 +166,6 @@ function AppContent() {
         {/* Enterprise Top Header */}
         <Header
           pendingCount={pendingCount}
-          isSyncing={isSyncing}
-          onSync={handleSync}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           isMobileMenuOpen={isMobileMenuOpen}
@@ -236,7 +233,7 @@ function AppContent() {
               )}
 
               {activeView === 'novo' && (
-                <UploaderView onRedacaoSaved={handleRedacaoSaved} onSync={handleSync} />
+                <UploaderView onRedacaoSaved={handleRedacaoSaved} />
               )}
 
               {(activeView === 'tabela' || activeView === 'sem_nome') && (
