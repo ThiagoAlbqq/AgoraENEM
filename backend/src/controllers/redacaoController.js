@@ -347,47 +347,6 @@ export const getRanking = async (req, res) => {
   }
 };
 
-// GET /api/redacoes/:id (Carrega detalhes completos de uma redação específica, incluindo imagem)
-export const getRedacaoById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    let redacao = null;
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('redacoes')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        redacao = {
-          ...data,
-          extracted_data: typeof data.extracted_data === 'string' ? JSON.parse(data.extracted_data || '{}') : (data.extracted_data || {})
-        };
-      }
-    } else if (db) {
-      const row = db.prepare('SELECT * FROM redacoes WHERE id = ?').get(id);
-      if (row) {
-        redacao = {
-          ...row,
-          extracted_data: typeof row.extracted_data === 'string' ? JSON.parse(row.extracted_data || '{}') : (row.extracted_data || {})
-        };
-      }
-    }
-
-    if (!redacao) {
-      return res.status(404).json({ error: 'Redação não encontrada.' });
-    }
-
-    res.status(200).json({ redacao });
-  } catch (error) {
-    console.error('[GetRedacaoById Error]:', error);
-    res.status(500).json({ error: 'Erro ao buscar detalhes da redação.' });
-  }
-};
-
 // POST /api/redacoes
 export const createRedacao = async (req, res) => {
   try {
