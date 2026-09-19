@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3, Trophy, Crown, Medal, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardView({ redacoes, isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome }) {
+export default function DashboardView({ redacoes, rankingRedacoes = [], isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome }) {
   const { user, isAdmin } = useAuth();
 
   const totalCount = redacoes.length;
@@ -25,7 +25,7 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
   const identifiedCount = redacoes.filter(r => r.is_synced && r.user_id && r.nome_aluno).length;
   const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.user_id || !r.nome_aluno)).length;
 
-  // Compute average per ENEM competency C1-C5
+  // Compute average per ENEM competency C1-C5 (calcula para as redações do aluno ou da escola se for professor)
   const calcCompAvg = (key) => {
     if (correctedList.length === 0) return 0;
     const sum = correctedList.reduce((acc, r) => {
@@ -43,17 +43,21 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
     { code: 'C5', label: 'Intervenção', avg: calcCompAvg('competencia_5'), color: '#c08532' }
   ];
 
-  // Top 3 Ranking Preview
+  // Top 3 Ranking Preview Geral da Escola (baseado no dataset completo de ranking com desempate ENEM)
   const topRanking = useMemo(() => {
+    const listToRank = rankingRedacoes && rankingRedacoes.length > 0 ? rankingRedacoes : redacoes;
+    const validList = listToRank.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
+
     const map = new Map();
-    correctedList.forEach(r => {
+    validList.forEach(r => {
       const nome = (r.nome_aluno || r.extracted_data?.aluno || 'Estudante').trim();
       const turma = (r.turma_aluno || r.extracted_data?.turma || 'Geral').trim();
       const nota = Number(r.nota_final || 0);
-      const key = `${nome.toLowerCase()}_${turma.toLowerCase()}`;
+      const userId = r.user_id;
+      const key = userId ? `user_${userId}` : `${nome.toLowerCase()}_${turma.toLowerCase()}`;
 
       if (!map.has(key)) {
-        map.set(key, { nome, turma, maxNota: nota, redacao: r });
+        map.set(key, { nome, turma, userId, maxNota: nota, redacao: r });
       } else {
         const item = map.get(key);
         if (nota > item.maxNota) {
@@ -63,11 +67,40 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
       }
     });
 
-    return Array.from(map.values())
-      .sort((a, b) => b.maxNota - a.maxNota)
-      .slice(0, 3)
-      .map((item, idx) => ({ ...item, rank: idx + 1 }));
-  }, [correctedList]);
+    const getComp = (item, compKey) => {
+      const ext = item.redacao?.extracted_data || {};
+      return ext?.avaliacoes?.enem?.[compKey]?.nota || 0;
+    };
+
+    const sorted = Array.from(map.values()).sort((a, b) => {
+      if (b.maxNota !== a.maxNota) return b.maxNota - a.maxNota;
+      const bC1 = getComp(b, 'competencia_1');
+      const aC1 = getComp(a, 'competencia_1');
+      if (bC1 !== aC1) return bC1 - aC1;
+      const bC4 = getComp(b, 'competencia_4');
+      const aC4 = getComp(a, 'competencia_4');
+      if (bC4 !== aC4) return bC4 - aC4;
+      const bC3 = getComp(b, 'competencia_3');
+      const aC3 = getComp(a, 'competencia_3');
+      if (bC3 !== aC3) return bC3 - aC3;
+      return 0;
+    });
+
+    let currentRank = 1;
+    return sorted.slice(0, 3).map((item, idx, arr) => {
+      if (idx > 0) {
+        const prev = arr[idx - 1];
+        const isTied = prev.maxNota === item.maxNota &&
+          getComp(prev, 'competencia_1') === getComp(item, 'competencia_1') &&
+          getComp(prev, 'competencia_4') === getComp(item, 'competencia_4') &&
+          getComp(prev, 'competencia_3') === getComp(item, 'competencia_3');
+        if (!isTied) {
+          currentRank = idx + 1;
+        }
+      }
+      return { ...item, rank: currentRank };
+    });
+  }, [rankingRedacoes, redacoes]);
 
   return (
     <div className="space-y-5">
@@ -292,11 +325,21 @@ export default function DashboardView({ redacoes, isLoading = false, onSelectRed
             {topRanking.map((item) => {
               const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : '🥉';
               const borderCol = item.rank === 1 ? 'border-amber-300 bg-amber-50/40' : item.rank === 2 ? 'border-slate-200 bg-slate-50/40' : 'border-amber-700/20 bg-amber-50/20';
+              const isOwn = user && (
+                (item.userId && Number(item.userId) === Number(user.id)) ||
+                (user.nome && item.nome && user.nome.trim().toLowerCase() === item.nome.trim().toLowerCase())
+              );
 
               return (
                 <div
-                  key={item.rank}
-                  onClick={() => onSelectRedacao(item.redacao)}
+                  key={`${item.nome}_${item.turma}_${item.rank}`}
+                  onClick={() => {
+                    if (isAdmin || isOwn) {
+                      onSelectRedacao(item.redacao);
+                    } else if (onNavigateToRanking) {
+                      onNavigateToRanking();
+                    }
+                  }}
                   className={`p-3 rounded-lg border ${borderCol} flex items-center justify-between hover:shadow-xs transition-all cursor-pointer group`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">

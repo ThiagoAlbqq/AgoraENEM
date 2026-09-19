@@ -182,11 +182,15 @@ export const getRedacoes = async (req, res) => {
     const includeImage = req.query.include_image === 'true';
     let formatted = [];
 
-    // Enable Vercel Edge caching with stale-while-revalidate (ultra-fast CDN response)
+    // Se não houver usuário autenticado, não expõe lista de redações
+    if (!user) {
+      return res.status(200).json({ redacoes: [] });
+    }
+
+    // Enable Vercel Edge caching with stale-while-revalidate
     res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=30');
 
     if (isSupabaseConfigured) {
-      // Omite imagem_base64 por padrão para reduzir payload de 18.4MB para 45KB (99.8% mais rápido)
       const selectFields = includeImage
         ? '*'
         : 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao';
@@ -196,7 +200,8 @@ export const getRedacoes = async (req, res) => {
         .select(selectFields)
         .order('data_captura', { ascending: false });
 
-      if (user && user.role !== 'ADMIN') {
+      // Estudante só recebe suas próprias redações validadas
+      if (user.role !== 'ADMIN') {
         const cleanStudentName = (user.nome || '').trim();
         query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
       }
@@ -227,7 +232,7 @@ export const getRedacoes = async (req, res) => {
 
     if (formatted.length === 0 && !isSupabaseConfigured && db) {
       let rows;
-      if (!user || user.role === 'ADMIN') {
+      if (user.role === 'ADMIN') {
         rows = db.prepare(`
           SELECT r.id, r.user_id, r.nome_aluno, r.turma_aluno, r.nome_detectado, r.data_captura,
                  r.tipo_input, r.texto_digitado, r.is_synced, r.extracted_data, r.nota_final,
@@ -293,7 +298,7 @@ export const getRedacoes = async (req, res) => {
 };
 
 // GET /api/redacoes/ranking
-// Retorna todas as redações validadas com pontuação para o quadro de ranking escolar
+// Retorna as redações validadas ordenadas por pontuação e critérios de desempate ENEM
 export const getRanking = async (req, res) => {
   try {
     let formatted = [];
@@ -339,6 +344,44 @@ export const getRanking = async (req, res) => {
         is_synced: true
       }));
     }
+
+    // Ordenação com critérios oficiais de desempate ENEM:
+    // 1. Nota Final Total
+    // 2. Competência 1: Norma Culta
+    // 3. Competência 4: Coesão
+    // 4. Competência 3: Coerência & Argumentação
+    // 5. Competência 2: Tema & Repertório
+    // 6. Competência 5: Proposta de Intervenção
+    formatted.sort((a, b) => {
+      if ((b.nota_final || 0) !== (a.nota_final || 0)) {
+        return (b.nota_final || 0) - (a.nota_final || 0);
+      }
+      const getComp = (item, key) => {
+        const ext = item.extracted_data || {};
+        return ext?.avaliacoes?.enem?.[key]?.nota || 0;
+      };
+      const bC1 = getComp(b, 'competencia_1');
+      const aC1 = getComp(a, 'competencia_1');
+      if (bC1 !== aC1) return bC1 - aC1;
+
+      const bC4 = getComp(b, 'competencia_4');
+      const aC4 = getComp(a, 'competencia_4');
+      if (bC4 !== aC4) return bC4 - aC4;
+
+      const bC3 = getComp(b, 'competencia_3');
+      const aC3 = getComp(a, 'competencia_3');
+      if (bC3 !== aC3) return bC3 - aC3;
+
+      const bC2 = getComp(b, 'competencia_2');
+      const aC2 = getComp(a, 'competencia_2');
+      if (bC2 !== aC2) return bC2 - aC2;
+
+      const bC5 = getComp(b, 'competencia_5');
+      const aC5 = getComp(a, 'competencia_5');
+      if (bC5 !== aC5) return bC5 - aC5;
+
+      return 0;
+    });
 
     return res.status(200).json({ ranking: formatted });
   } catch (err) {
@@ -782,13 +825,17 @@ export const getRedacaoById = async (req, res) => {
       return res.status(404).json({ error: 'Redação não encontrada.' });
     }
 
-    // Controle de acesso para estudantes
-    if (user && user.role !== 'ADMIN') {
+    // Controle de acesso estrito: apenas o próprio estudante ou professores/admins podem ver o texto integral e a imagem
+    if (!user) {
+      return res.status(401).json({ error: 'Autenticação necessária para visualizar a redação.' });
+    }
+
+    if (user.role !== 'ADMIN') {
       const cleanStudentName = (user.nome || '').trim().toLowerCase();
       const alunoNome = (redacao.nome_aluno || '').trim().toLowerCase();
-      const isOwner = (redacao.user_id && redacao.user_id === user.id) || (alunoNome === cleanStudentName);
-      if (!isOwner && redacao.status_validacao !== 'VALIDADA') {
-        return res.status(403).json({ error: 'Acesso não autorizado a esta redação.' });
+      const isOwner = (redacao.user_id && Number(redacao.user_id) === Number(user.id)) || (alunoNome && alunoNome === cleanStudentName);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações.' });
       }
     }
 

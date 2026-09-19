@@ -217,6 +217,7 @@ function AppContent() {
               {activeView === 'dashboard' && (
                 <DashboardView
                   redacoes={redacoes}
+                  rankingRedacoes={rankingRedacoes}
                   isLoading={isLoadingRedacoes}
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onNavigateToUpload={() => handleSetActiveView('novo')}

@@ -13,6 +13,12 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
   const [rankingMode, setRankingMode] = useState('alunos'); // 'alunos' | 'redacoes'
   const [sortBy, setSortBy] = useState('maxNota'); // 'maxNota' | 'avgNota' | 'totalRedacoes'
 
+  // Helper para extrair notas das competências ENEM para desempate
+  const getComp = (r, key) => {
+    const ext = r?.extracted_data || r?.bestRedacao?.extracted_data || {};
+    return ext?.avaliacoes?.enem?.[key]?.nota || 0;
+  };
+
   // Filtrar apenas redações corrigidas com nota válida
   const validRedacoes = useMemo(() => {
     return redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
@@ -28,7 +34,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     return Array.from(set).sort();
   }, [validRedacoes]);
 
-  // Agrupamento por Aluno
+  // Agrupamento por Aluno (Top 10 Melhores Notas com Critérios Oficiais de Desempate ENEM)
   const rankingAlunos = useMemo(() => {
     const map = new Map();
 
@@ -79,27 +85,73 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       list = list.filter(item => item.nome.toLowerCase().includes(q) || item.turma.toLowerCase().includes(q));
     }
 
-    // Ordenação
+    // Ordenação com Critérios de Desempate ENEM:
+    // 1. Maior Nota Final
+    // 2. Norma Culta (C1)
+    // 3. Coesão (C4)
+    // 4. Coerência & Argumentação (C3)
+    // 5. Tema & Repertório (C2)
+    // 6. Intervenção (C5)
     list.sort((a, b) => {
       if (sortBy === 'maxNota') {
         if (b.maxNota !== a.maxNota) return b.maxNota - a.maxNota;
-        return b.avgNota - a.avgNota;
+
+        const bC1 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_1');
+        const aC1 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_1');
+        if (bC1 !== aC1) return bC1 - aC1;
+
+        const bC4 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_4');
+        const aC4 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_4');
+        if (bC4 !== aC4) return bC4 - aC4;
+
+        const bC3 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_3');
+        const aC3 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_3');
+        if (bC3 !== aC3) return bC3 - aC3;
+
+        const bC2 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_2');
+        const aC2 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_2');
+        if (bC2 !== aC2) return bC2 - aC2;
+
+        const bC5 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_5');
+        const aC5 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_5');
+        if (bC5 !== aC5) return bC5 - aC5;
+
+        return 0;
       }
       if (sortBy === 'avgNota') {
         if (b.avgNota !== a.avgNota) return b.avgNota - a.avgNota;
         return b.maxNota - a.maxNota;
       }
       if (sortBy === 'totalRedacoes') {
-        return b.totalRedacoes - a.totalRedacoes;
+        if (b.totalRedacoes !== a.totalRedacoes) return b.totalRedacoes - a.totalRedacoes;
+        return b.maxNota - a.maxNota;
       }
       return 0;
     });
 
-    // Atribuir posições
-    return list.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    // Atribuir posições respeitando empates técnicos no topo
+    let currentRank = 1;
+    const rankedList = list.map((item, idx, arr) => {
+      if (idx > 0) {
+        const prev = arr[idx - 1];
+        const isTied = (sortBy === 'maxNota')
+          ? prev.maxNota === item.maxNota &&
+            getComp(prev.bestRedacao || prev, 'competencia_1') === getComp(item.bestRedacao || item, 'competencia_1') &&
+            getComp(prev.bestRedacao || prev, 'competencia_4') === getComp(item.bestRedacao || item, 'competencia_4') &&
+            getComp(prev.bestRedacao || prev, 'competencia_3') === getComp(item.bestRedacao || item, 'competencia_3')
+          : prev[sortBy] === item[sortBy];
+        if (!isTied) {
+          currentRank = idx + 1;
+        }
+      }
+      return { ...item, rank: currentRank };
+    });
+
+    // Limita o ranking aos 10 melhores
+    return rankedList.slice(0, 10);
   }, [validRedacoes, selectedTurma, searchQuery, sortBy]);
 
-  // Ranking direto por redações individuais
+  // Ranking direto por redações individuais (Top 10)
   const rankingRedacoes = useMemo(() => {
     let list = [...validRedacoes];
 
@@ -112,8 +164,43 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       list = list.filter(r => (r.nome_aluno || '').toLowerCase().includes(q) || (r.turma_aluno || '').toLowerCase().includes(q));
     }
 
-    list.sort((a, b) => (b.nota_final || 0) - (a.nota_final || 0));
-    return list.map((r, idx) => ({ ...r, rank: idx + 1 }));
+    // Ordenação com desempate ENEM
+    list.sort((a, b) => {
+      if ((b.nota_final || 0) !== (a.nota_final || 0)) {
+        return (b.nota_final || 0) - (a.nota_final || 0);
+      }
+      const bC1 = getComp(b, 'competencia_1');
+      const aC1 = getComp(a, 'competencia_1');
+      if (bC1 !== aC1) return bC1 - aC1;
+
+      const bC4 = getComp(b, 'competencia_4');
+      const aC4 = getComp(a, 'competencia_4');
+      if (bC4 !== aC4) return bC4 - aC4;
+
+      const bC3 = getComp(b, 'competencia_3');
+      const aC3 = getComp(a, 'competencia_3');
+      if (bC3 !== aC3) return bC3 - aC3;
+
+      return 0;
+    });
+
+    let currentRank = 1;
+    const ranked = list.map((r, idx, arr) => {
+      if (idx > 0) {
+        const prev = arr[idx - 1];
+        const isTied = (prev.nota_final || 0) === (r.nota_final || 0) &&
+          getComp(prev, 'competencia_1') === getComp(r, 'competencia_1') &&
+          getComp(prev, 'competencia_4') === getComp(r, 'competencia_4') &&
+          getComp(prev, 'competencia_3') === getComp(r, 'competencia_3');
+        if (!isTied) {
+          currentRank = idx + 1;
+        }
+      }
+      return { ...r, rank: currentRank };
+    });
+
+    // Limita aos 10 melhores
+    return ranked.slice(0, 10);
   }, [validRedacoes, selectedTurma, searchQuery]);
 
   // Posição do usuário logado (caso seja estudante)
@@ -139,22 +226,34 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     return { bg: 'bg-[#f7f7f4]', text: 'text-[#807d72]', border: 'border-[#e6e5e0]', badge: 'bg-[#e6e5e0] text-[#26251e]', label: `${rank}º` };
   };
 
+  // Helper para verificar se a redação pertence ao aluno logado
+  const canViewEssay = (itemOrRedacao) => {
+    if (isAdmin) return true;
+    if (!user) return false;
+    const uId = itemOrRedacao.userId || itemOrRedacao.user_id;
+    const sName = (itemOrRedacao.nome || itemOrRedacao.nome_aluno || '').toLowerCase().trim();
+    const myName = (user.nome || '').toLowerCase().trim();
+    return (uId && Number(uId) === Number(user.id)) || (sName && sName === myName);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      
       {/* Header Banner */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-amber-300 bg-amber-50 text-amber-800">
               <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Quadro Geral de Desempenho & Notas</span>
+              <span>Quadro Oficial • Top 10 Melhores Notas</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
-              <span>🏆 Ranking Oficial Ágora ENEM</span>
+              <span>🏆 Top 10 Ranking Escolar Ágora ENEM</span>
             </h2>
-            <p className="text-xs text-[#807d72] max-w-xl leading-relaxed">
-              Classificação pedagógica dos estudantes baseada nas notas das redações corrigidas e validadas pela Matriz do ENEM.
+            <p className="text-xs text-[#807d72] max-w-2xl leading-relaxed">
+              Classificação das 10 maiores notas da escola validadas na Matriz ENEM. 
+              <span className="block mt-1 text-[11px] font-mono text-[#5a5852]">
+                ⚖️ <strong>Critérios de Desempate Oficiais:</strong> 1º Norma Culta (C1) • 2º Coesão (C4) • 3º Coerência & Argumentação (C3)
+              </span>
             </p>
           </div>
 
@@ -162,12 +261,12 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
           <div className="flex items-center gap-3 bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg text-xs font-mono shrink-0">
             <div>
               <span className="text-[10px] text-[#807d72] block uppercase">Participantes</span>
-              <strong className="text-[#26251e] text-sm">{rankingAlunos.length} alunos</strong>
+              <strong className="text-[#26251e] text-sm">{rankingAlunos.length} no Top 10</strong>
             </div>
             <div className="h-6 w-px bg-[#e6e5e0]" />
             <div>
               <span className="text-[10px] text-[#807d72] block uppercase">Redações</span>
-              <strong className="text-[#f54e00] text-sm">{validRedacoes.length} notas</strong>
+              <strong className="text-[#f54e00] text-sm">{validRedacoes.length} corrigidas</strong>
             </div>
           </div>
         </div>
@@ -187,7 +286,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                   Sua Classificação
                 </span>
                 <span className="text-xs text-[#807d72] font-mono">
-                  de {rankingAlunos.length} estudantes
+                  {currentStudentRank.rank <= 10 ? 'Você está no Top 10 Oficial!' : `Posição ${currentStudentRank.rank}º no quadro escolar`}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-[#26251e] mt-1">
@@ -222,12 +321,16 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
           {/* 2º LUGAR (PRATA) */}
           {top2 && (
             <div 
-              onClick={() => onSelectRedacao(top2.bestRedacao || top2)}
-              className="bg-[#ffffff] border-2 border-slate-200 hover:border-slate-400 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm hover:shadow-md transition-all cursor-pointer order-2 md:order-1"
+              onClick={() => {
+                if (canViewEssay(top2)) onSelectRedacao(top2.bestRedacao || top2);
+              }}
+              className={`bg-[#ffffff] border-2 border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-2 md:order-1 ${
+                canViewEssay(top2) ? 'hover:border-slate-400 hover:shadow-md cursor-pointer' : 'cursor-default'
+              }`}
             >
               <div className="absolute -top-3.5 bg-slate-400 text-white text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
                 <Medal className="w-3.5 h-3.5" />
-                2º LUGAR
+                {top2.rank}º LUGAR
               </div>
               <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-slate-600 font-bold text-lg mb-2 mt-2">
                 🥈
@@ -253,12 +356,16 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
           {/* 1º LUGAR (OURO - CENTRO & ELEVADO) */}
           {top1 && (
             <div 
-              onClick={() => onSelectRedacao(top1.bestRedacao || top1)}
-              className="bg-gradient-to-b from-amber-50/80 to-[#ffffff] border-2 border-amber-400 rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center relative shadow-md hover:shadow-lg transition-all cursor-pointer order-1 md:order-2 md:-translate-y-2"
+              onClick={() => {
+                if (canViewEssay(top1)) onSelectRedacao(top1.bestRedacao || top1);
+              }}
+              className={`bg-gradient-to-b from-amber-50/80 to-[#ffffff] border-2 border-amber-400 rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center relative shadow-md transition-all order-1 md:order-2 md:-translate-y-2 ${
+                canViewEssay(top1) ? 'hover:shadow-lg cursor-pointer' : 'cursor-default'
+              }`}
             >
               <div className="absolute -top-4 bg-amber-500 text-white text-xs font-mono font-bold px-4 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
                 <Crown className="w-4 h-4 text-amber-200" />
-                CAMPEÃO • 1º LUGAR
+                CAMPEÃO • {top1.rank}º LUGAR
               </div>
               <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 font-bold text-2xl mb-2 mt-3 shadow-inner">
                 🥇
@@ -284,12 +391,16 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
           {/* 3º LUGAR (BRONZE) */}
           {top3 && (
             <div 
-              onClick={() => onSelectRedacao(top3.bestRedacao || top3)}
-              className="bg-[#ffffff] border-2 border-amber-700/20 hover:border-amber-700/50 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm hover:shadow-md transition-all cursor-pointer order-3"
+              onClick={() => {
+                if (canViewEssay(top3)) onSelectRedacao(top3.bestRedacao || top3);
+              }}
+              className={`bg-[#ffffff] border-2 border-amber-700/20 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-3 ${
+                canViewEssay(top3) ? 'hover:border-amber-700/50 hover:shadow-md cursor-pointer' : 'cursor-default'
+              }`}
             >
               <div className="absolute -top-3.5 bg-amber-700 text-white text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
                 <Medal className="w-3.5 h-3.5" />
-                3º LUGAR
+                {top3.rank}º LUGAR
               </div>
               <div className="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-700/30 flex items-center justify-center text-amber-800 font-bold text-lg mb-2 mt-2">
                 🥉
@@ -327,7 +438,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
               rankingMode === 'alunos' ? 'bg-[#26251e] text-white shadow-xs' : 'text-[#807d72] hover:text-[#26251e]'
             }`}
           >
-            Por Estudante (Média/Recorde)
+            Top 10 por Estudante
           </button>
           <button
             type="button"
@@ -336,7 +447,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
               rankingMode === 'redacoes' ? 'bg-[#26251e] text-white shadow-xs' : 'text-[#807d72] hover:text-[#26251e]'
             }`}
           >
-            Por Redação Individual
+            Top 10 por Redação
           </button>
         </div>
 
@@ -372,15 +483,15 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
       </div>
 
-      {/* TABELA DE CLASSIFICAÇÃO COMPLETA */}
+      {/* TABELA DE CLASSIFICAÇÃO TOP 10 */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl overflow-hidden shadow-xs">
         <div className="p-4 border-b border-[#e6e5e0] flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
             <Award className="w-4 h-4 text-[#f54e00]" />
-            Tabela de Classificação Geral
+            Top 10 Melhores Notas da Escola
           </h3>
           <span className="text-xs font-mono text-[#807d72]">
-            {rankingMode === 'alunos' ? `${rankingAlunos.length} estudantes` : `${rankingRedacoes.length} redações`}
+            {rankingMode === 'alunos' ? `${rankingAlunos.length} classificados` : `${rankingRedacoes.length} classificados`}
           </span>
         </div>
 
@@ -403,7 +514,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                     <th className="py-3 px-4 text-right">Nota Final</th>
                   </>
                 )}
-                <th className="py-3 px-4 w-12 text-center">Ação</th>
+                <th className="py-3 px-4 w-28 text-center">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
@@ -420,15 +531,18 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                       (item.userId && Number(item.userId) === Number(user.id)) ||
                       (item.nome.toLowerCase().trim() === (user.nome || '').toLowerCase().trim())
                     );
+                    const isAuthorized = canViewEssay(item);
                     const medal = getMedalColor(item.rank);
 
                     return (
                       <tr 
                         key={item.key}
-                        onClick={() => onSelectRedacao(item.bestRedacao)}
-                        className={`hover:bg-[#fafaf7] transition-colors cursor-pointer group ${
-                          isCurrentUser ? 'bg-amber-500/10 font-semibold' : ''
-                        }`}
+                        onClick={() => {
+                          if (isAuthorized) onSelectRedacao(item.bestRedacao);
+                        }}
+                        className={`transition-colors ${
+                          isAuthorized ? 'hover:bg-[#fafaf7] cursor-pointer group' : 'cursor-default'
+                        } ${isCurrentUser ? 'bg-amber-500/10 font-semibold' : ''}`}
                       >
                         <td className="py-3.5 px-4 text-center font-mono">
                           {item.rank <= 3 ? (
@@ -444,7 +558,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#26251e] font-semibold text-xs sm:text-sm group-hover:text-[#f54e00] transition-colors">
+                            <span className={`text-[#26251e] font-semibold text-xs sm:text-sm ${isAuthorized ? 'group-hover:text-[#f54e00]' : ''} transition-colors`}>
                               {item.nome}
                             </span>
                             {isCurrentUser && (
@@ -472,7 +586,15 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          <ChevronRight className="w-4 h-4 text-[#807d72] group-hover:text-[#26251e] transition-colors inline-block" />
+                          {isAuthorized ? (
+                            <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
+                              Ver Redação <ChevronRight className="w-3 h-3 inline" />
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-[#a09c92] font-mono">
+                              🔒 Restrito
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -491,14 +613,17 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                       (r.user_id && Number(r.user_id) === Number(user.id)) ||
                       (r.nome_aluno && r.nome_aluno.toLowerCase().trim() === (user.nome || '').toLowerCase().trim())
                     );
+                    const isAuthorized = canViewEssay(r);
 
                     return (
                       <tr 
                         key={r.id}
-                        onClick={() => onSelectRedacao(r)}
-                        className={`hover:bg-[#fafaf7] transition-colors cursor-pointer group ${
-                          isCurrentUser ? 'bg-amber-500/10 font-semibold' : ''
-                        }`}
+                        onClick={() => {
+                          if (isAuthorized) onSelectRedacao(r);
+                        }}
+                        className={`transition-colors ${
+                          isAuthorized ? 'hover:bg-[#fafaf7] cursor-pointer group' : 'cursor-default'
+                        } ${isCurrentUser ? 'bg-amber-500/10 font-semibold' : ''}`}
                       >
                         <td className="py-3.5 px-4 text-center font-mono font-bold text-xs">
                           {r.rank <= 3 ? (
@@ -510,7 +635,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#26251e] font-semibold text-xs sm:text-sm group-hover:text-[#f54e00] transition-colors">
+                            <span className={`text-[#26251e] font-semibold text-xs sm:text-sm ${isAuthorized ? 'group-hover:text-[#f54e00]' : ''} transition-colors`}>
                               {r.nome_aluno || 'Estudante'}
                             </span>
                             {isCurrentUser && (
@@ -534,7 +659,15 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          <ChevronRight className="w-4 h-4 text-[#807d72] group-hover:text-[#26251e] transition-colors inline-block" />
+                          {isAuthorized ? (
+                            <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
+                              Ver Redação <ChevronRight className="w-3 h-3 inline" />
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-[#a09c92] font-mono">
+                              🔒 Restrito
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
