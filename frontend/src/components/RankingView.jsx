@@ -96,27 +96,27 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       if (sortBy === 'maxNota') {
         if (b.maxNota !== a.maxNota) return b.maxNota - a.maxNota;
 
-        const bC1 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_1');
-        const aC1 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_1');
+        const bC1 = getComp(b.bestRedacao || b, 'competencia_1');
+        const aC1 = getComp(a.bestRedacao || a, 'competencia_1');
         if (bC1 !== aC1) return bC1 - aC1;
 
-        const bC4 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_4');
-        const aC4 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_4');
+        const bC4 = getComp(b.bestRedacao || b, 'competencia_4');
+        const aC4 = getComp(a.bestRedacao || a, 'competencia_4');
         if (bC4 !== aC4) return bC4 - aC4;
 
-        const bC3 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_3');
-        const aC3 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_3');
+        const bC3 = getComp(b.bestRedacao || b, 'competencia_3');
+        const aC3 = getComp(a.bestRedacao || a, 'competencia_3');
         if (bC3 !== aC3) return bC3 - aC3;
 
-        const bC2 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_2');
-        const aC2 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_2');
+        const bC2 = getComp(b.bestRedacao || b, 'competencia_2');
+        const aC2 = getComp(a.bestRedacao || a, 'competencia_2');
         if (bC2 !== aC2) return bC2 - aC2;
 
-        const bC5 = getComp(a.bestRedacao ? b.bestRedacao : b, 'competencia_5');
-        const aC5 = getComp(a.bestRedacao ? a.bestRedacao : a, 'competencia_5');
+        const bC5 = getComp(b.bestRedacao || b, 'competencia_5');
+        const aC5 = getComp(a.bestRedacao || a, 'competencia_5');
         if (bC5 !== aC5) return bC5 - aC5;
 
-        return 0;
+        return a.nome.localeCompare(b.nome);
       }
       if (sortBy === 'avgNota') {
         if (b.avgNota !== a.avgNota) return b.avgNota - a.avgNota;
@@ -126,29 +126,14 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
         if (b.totalRedacoes !== a.totalRedacoes) return b.totalRedacoes - a.totalRedacoes;
         return b.maxNota - a.maxNota;
       }
-      return 0;
+      return a.nome.localeCompare(b.nome);
     });
 
-    // Atribuir posições respeitando empates técnicos no topo
-    let currentRank = 1;
-    const rankedList = list.map((item, idx, arr) => {
-      if (idx > 0) {
-        const prev = arr[idx - 1];
-        const isTied = (sortBy === 'maxNota')
-          ? prev.maxNota === item.maxNota &&
-            getComp(prev.bestRedacao || prev, 'competencia_1') === getComp(item.bestRedacao || item, 'competencia_1') &&
-            getComp(prev.bestRedacao || prev, 'competencia_4') === getComp(item.bestRedacao || item, 'competencia_4') &&
-            getComp(prev.bestRedacao || prev, 'competencia_3') === getComp(item.bestRedacao || item, 'competencia_3')
-          : prev[sortBy] === item[sortBy];
-        if (!isTied) {
-          currentRank = idx + 1;
-        }
-      }
-      return { ...item, rank: currentRank };
-    });
-
-    // Limita o ranking aos 10 melhores
-    return rankedList.slice(0, 10);
+    // Posições sequenciais oficiais de 1º ao 10º
+    return list.slice(0, 10).map((item, idx) => ({
+      ...item,
+      rank: idx + 1
+    }));
   }, [validRedacoes, selectedTurma, searchQuery, sortBy]);
 
   // Ranking direto por redações individuais (Top 10)
@@ -181,26 +166,24 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       const aC3 = getComp(a, 'competencia_3');
       if (bC3 !== aC3) return bC3 - aC3;
 
-      return 0;
+      const bC2 = getComp(b, 'competencia_2');
+      const aC2 = getComp(a, 'competencia_2');
+      if (bC2 !== aC2) return bC2 - aC2;
+
+      const bC5 = getComp(b, 'competencia_5');
+      const aC5 = getComp(a, 'competencia_5');
+      if (bC5 !== aC5) return bC5 - aC5;
+
+      const aName = (a.nome_aluno || '').trim().toLowerCase();
+      const bName = (b.nome_aluno || '').trim().toLowerCase();
+      return aName.localeCompare(bName);
     });
 
-    let currentRank = 1;
-    const ranked = list.map((r, idx, arr) => {
-      if (idx > 0) {
-        const prev = arr[idx - 1];
-        const isTied = (prev.nota_final || 0) === (r.nota_final || 0) &&
-          getComp(prev, 'competencia_1') === getComp(r, 'competencia_1') &&
-          getComp(prev, 'competencia_4') === getComp(r, 'competencia_4') &&
-          getComp(prev, 'competencia_3') === getComp(r, 'competencia_3');
-        if (!isTied) {
-          currentRank = idx + 1;
-        }
-      }
-      return { ...r, rank: currentRank };
-    });
-
-    // Limita aos 10 melhores
-    return ranked.slice(0, 10);
+    // Posições sequenciais oficiais de 1º ao 10º
+    return list.slice(0, 10).map((r, idx) => ({
+      ...r,
+      rank: idx + 1
+    }));
   }, [validRedacoes, selectedTurma, searchQuery]);
 
   // Posição do usuário logado (caso seja estudante)

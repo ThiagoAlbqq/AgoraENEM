@@ -380,7 +380,9 @@ export const getRanking = async (req, res) => {
       const aC5 = getComp(a, 'competencia_5');
       if (bC5 !== aC5) return bC5 - aC5;
 
-      return 0;
+      const aName = (a.nome_aluno || '').trim().toLowerCase();
+      const bName = (b.nome_aluno || '').trim().toLowerCase();
+      return aName.localeCompare(bName);
     });
 
     return res.status(200).json({ ranking: formatted });

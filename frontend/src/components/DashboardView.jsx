@@ -83,23 +83,19 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
       const bC3 = getComp(b, 'competencia_3');
       const aC3 = getComp(a, 'competencia_3');
       if (bC3 !== aC3) return bC3 - aC3;
-      return 0;
+      const bC2 = getComp(b, 'competencia_2');
+      const aC2 = getComp(a, 'competencia_2');
+      if (bC2 !== aC2) return bC2 - aC2;
+      const bC5 = getComp(b, 'competencia_5');
+      const aC5 = getComp(a, 'competencia_5');
+      if (bC5 !== aC5) return bC5 - aC5;
+      return a.nome.localeCompare(b.nome);
     });
 
-    let currentRank = 1;
-    return sorted.slice(0, 3).map((item, idx, arr) => {
-      if (idx > 0) {
-        const prev = arr[idx - 1];
-        const isTied = prev.maxNota === item.maxNota &&
-          getComp(prev, 'competencia_1') === getComp(item, 'competencia_1') &&
-          getComp(prev, 'competencia_4') === getComp(item, 'competencia_4') &&
-          getComp(prev, 'competencia_3') === getComp(item, 'competencia_3');
-        if (!isTied) {
-          currentRank = idx + 1;
-        }
-      }
-      return { ...item, rank: currentRank };
-    });
+    return sorted.slice(0, 3).map((item, idx) => ({
+      ...item,
+      rank: idx + 1
+    }));
   }, [rankingRedacoes, redacoes]);
 
   return (
