@@ -1,15 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, GraduationCap, Sparkles } from 'lucide-react';
-import { saveRedacaoOffline, saveMultipleRedacoesOffline } from '../db/db';
-import { syncOfflineDocuments } from '../services/syncService';
+import { processRedacoesCloud } from '../services/cloudCorrectionService';
 
-export default function UploaderView({ onRedacaoSaved, onSync }) {
+export default function UploaderView({ onRedacaoSaved }) {
   const [mode, setMode] = useState('imagem');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [typedText, setTypedText] = useState('');
   const [manualName, setManualName] = useState('');
   const [manualTurma, setManualTurma] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progressText, setProgressText] = useState('');
   const [feedback, setFeedback] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -48,6 +48,7 @@ export default function UploaderView({ onRedacaoSaved, onSync }) {
     if (selectedFiles.length === 0) return;
     setIsProcessing(true);
     setFeedback(null);
+    setProgressText('Iniciando avaliação...');
 
     try {
       const itemsToSave = selectedFiles.map((f) => ({
@@ -57,18 +58,13 @@ export default function UploaderView({ onRedacaoSaved, onSync }) {
         turma_manual: manualTurma.trim() || null
       }));
 
-      await saveMultipleRedacoesOffline(itemsToSave);
-
-      // Trigger automatic AI evaluation immediately
-      if (onSync) {
-        await onSync();
-      } else {
-        await syncOfflineDocuments();
-      }
+      const res = await processRedacoesCloud(itemsToSave, (cur, total) => {
+        setProgressText(`Avaliando Lote ${cur} de ${total}...`);
+      });
 
       setFeedback({
         type: 'success',
-        message: `${selectedFiles.length} redação(ões) enviada(s) e avaliada(s) pela IA com sucesso!`
+        message: res.message || `${selectedFiles.length} redação(ões) avaliada(s) e salvas na nuvem com sucesso!`
       });
 
       setSelectedFiles([]);
@@ -83,6 +79,7 @@ export default function UploaderView({ onRedacaoSaved, onSync }) {
       });
     } finally {
       setIsProcessing(false);
+      setProgressText('');
     }
   };
 
@@ -90,25 +87,19 @@ export default function UploaderView({ onRedacaoSaved, onSync }) {
     if (!typedText.trim()) return;
     setIsProcessing(true);
     setFeedback(null);
+    setProgressText('Avaliando texto...');
 
     try {
-      await saveRedacaoOffline({
+      const res = await processRedacoesCloud([{
         texto_digitado: typedText.trim(),
         tipo_input: 'texto',
         nome_manual: manualName.trim() || null,
         turma_manual: manualTurma.trim() || null
-      });
-
-      // Trigger automatic AI evaluation immediately
-      if (onSync) {
-        await onSync();
-      } else {
-        await syncOfflineDocuments();
-      }
+      }]);
 
       setFeedback({
         type: 'success',
-        message: 'Redação digitada enviada e avaliada pela IA com sucesso!'
+        message: res.message || 'Redação digitada avaliada e salva na nuvem com sucesso!'
       });
 
       setTypedText('');
@@ -122,6 +113,7 @@ export default function UploaderView({ onRedacaoSaved, onSync }) {
       });
     } finally {
       setIsProcessing(false);
+      setProgressText('');
     }
   };
 

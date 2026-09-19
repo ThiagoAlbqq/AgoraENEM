@@ -9,8 +9,7 @@ import RankingView from './components/RankingView';
 import ModalDetalhesRedacao from './components/ModalDetalhesRedacao';
 import LoginView from './components/LoginView';
 import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
-import { db, deleteRedacao } from './db/db';
-import { syncOfflineDocuments } from './services/syncService';
+import { clearAllLocalRedacoes } from './db/db';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authService } from './services/authService';
 import { X, Award, Loader2 } from 'lucide-react';
@@ -55,10 +54,15 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Limpa silenciosamente o cache antigo do IndexedDB do navegador para evitar conflitos
+  useEffect(() => {
+    clearAllLocalRedacoes().catch(() => {});
+  }, []);
+
   const loadRedacoes = async (silent = false) => {
     if (!silent) setIsLoadingRedacoes(true);
     try {
-      // 1. Busca redações da nuvem e dados completos de ranking em paralelo
+      // 1. Busca redações da nuvem e dados completos de ranking em paralelo diretamente do Supabase
       const [cloudDocsRes, rankingDocsRes] = await Promise.all([
         authService.fetchCloudRedacoes(),
         authService.fetchRankingRedacoes()
@@ -68,8 +72,7 @@ function AppContent() {
       const rankingDocs = Array.isArray(rankingDocsRes) ? rankingDocsRes : [];
 
       if (!isAdmin && user && user.role === 'ESTUDANTE') {
-        // Para Estudante: Não carregar 51 redações locais de outros alunos (evita piscar!)
-        // Mostrar apenas as redações validadas do próprio estudante logado
+        // Para Estudante: Mostrar apenas as redações validadas do próprio estudante logado
         const cleanName = (user.nome || '').toLowerCase().trim();
         const studentCloudDocs = cloudDocs.filter(r =>
           (r.user_id && Number(r.user_id) === Number(user.id)) ||
@@ -79,37 +82,18 @@ function AppContent() {
         setRedacoes(studentCloudDocs);
         setRankingRedacoes(rankingDocs.length > 0 ? rankingDocs : cloudDocs);
       } else {
-        // Para Admin / Professor: Carregar nuvem + locais
-        const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-        const combined = [...cloudDocs];
-        for (const local of localDocs) {
-          const isAlreadyInCloud = cloudDocs.some(c =>
-            String(c.id) === String(local.id) ||
-            String(c.id) === String(local.cloud_id) ||
-            (c.nome_aluno && local.nome_aluno && c.nome_aluno.trim().toLowerCase() === local.nome_aluno.trim().toLowerCase() && c.data_captura === local.data_captura)
-          );
-          if (!isAlreadyInCloud) {
-            combined.unshift(local);
-          }
-        }
-        setRedacoes(combined);
-        setRankingRedacoes(rankingDocs.length > 0 ? rankingDocs : combined);
+        // Para Admin / Professor: Exibir 100% das redações da nuvem Supabase
+        setRedacoes(cloudDocs);
+        setRankingRedacoes(rankingDocs.length > 0 ? rankingDocs : cloudDocs);
       }
     } catch (error) {
-      console.error('Falha ao carregar redações:', error);
-      if (isAdmin) {
-        const localDocs = await db.redacoes.orderBy('data_captura').reverse().toArray();
-        setRedacoes(localDocs);
-        setRankingRedacoes(localDocs);
-      } else {
-        setRedacoes([]);
-        setRankingRedacoes([]);
-      }
+      console.error('Falha ao carregar redações da nuvem:', error);
+      setRedacoes([]);
+      setRankingRedacoes([]);
     } finally {
       if (!silent) setIsLoadingRedacoes(false);
     }
   };
-
 
   useEffect(() => {
     loadRedacoes();
@@ -126,44 +110,20 @@ function AppContent() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      const res = await syncOfflineDocuments();
-      loadRedacoes(true);
-      if (res && res.message) {
-        showToast(res.message, res.errorCount > 0 ? 'warning' : 'success');
-      } else {
-        showToast('Correção de redações concluída com sucesso!');
-      }
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-      showToast(`Falha na correção: ${error.message}`, 'error');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleDeleteRedacao = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta redação?')) {
-      // 1. Atualização Otimista Imediata (0ms): Remove o card na hora sem sumir com os outros
+      // 1. Atualização Otimista Imediata (0ms): Remove o card na hora
       const previousRedacoes = [...redacoes];
       setRedacoes(prev => prev.filter(r => String(r.id) !== String(id) && String(r.cloud_id) !== String(id)));
       showToast('Redação excluída com sucesso!', 'success');
 
       try {
-        // 2. Exclui no IndexedDB local e no Supabase (em background)
-        await Promise.all([
-          deleteRedacao(id).catch(() => {}),
-          authService.deleteCloudRedacao(id).catch(err => {
-            console.warn('Aviso ao excluir na nuvem:', err.message);
-          })
-        ]);
-        // 3. Atualiza estado de fundo silenciosamente (sem travar nem piscar os cards)
+        // 2. Exclui diretamente no Supabase
+        await authService.deleteCloudRedacao(id);
+        // 3. Atualiza estado de fundo silenciosamente
         await loadRedacoes(true);
       } catch (error) {
         console.error('Erro ao excluir redação:', error);
-        // Em caso de erro, reverte a exclusão na tela
         setRedacoes(previousRedacoes);
         showToast(`Erro ao excluir: ${error.message}`, 'error');
       }
@@ -171,7 +131,7 @@ function AppContent() {
   };
 
   const pendingCount = redacoes.filter(r => !r.is_synced).length;
-  const unidentifiedCount = redacoes.filter(r => r.is_synced && (!r.nome_detectado || !r.nome_aluno)).length;
+  const unidentifiedCount = redacoes.filter(r => !r.user_id || !r.nome_aluno).length;
 
   return (
     <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">

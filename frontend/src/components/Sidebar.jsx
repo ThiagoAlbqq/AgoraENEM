@@ -182,41 +182,16 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
           </div>
         ))}
 
-        {/* Cloud Migration Action for Admin */}
+        {/* Cloud Status */}
         {isAdmin && (
           <div className="pt-2 border-t border-[#e6e5e0]/60 space-y-1.5">
             <div className="px-2 pb-1 text-[10px] font-mono font-medium text-[#a09c92] uppercase tracking-wider">
-              Sincronização
+              Armazenamento
             </div>
-            <button
-              type="button"
-              onClick={handleCloudSync}
-              disabled={isCloudSyncing}
-              className="w-full py-1.5 px-2.5 rounded-lg text-xs font-normal border border-[#9fc9a2] bg-[#9fc9a2]/20 hover:bg-[#9fc9a2]/40 text-[#1f8a65] flex items-center justify-between transition-all cursor-pointer"
-            >
-              <span className="flex items-center gap-2 truncate">
-                <CloudUpload className={`w-3.5 h-3.5 shrink-0 ${isCloudSyncing ? 'animate-bounce' : ''}`} />
-                <span className="truncate">{syncProgress || 'Subir p/ Nuvem'}</span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportLocalBackup}
-              className="w-full py-1.5 px-2.5 rounded-lg text-xs font-normal border border-[#e6e5e0] bg-[#fafaf7] hover:bg-[#e6e5e0] text-[#5a5852] flex items-center justify-between transition-all cursor-pointer"
-              title="Baixar cópia de segurança em JSON de todas as redações salvas no navegador"
-            >
-              <span className="flex items-center gap-2 truncate">
-                <Download className="w-3.5 h-3.5 shrink-0 text-[#f54e00]" />
-                <span className="truncate">Baixar Backup (JSON)</span>
-              </span>
-            </button>
-
-            {syncFeedback && (
-              <span className="block px-2 text-[9.5px] font-mono text-[#1f8a65]">
-                {syncFeedback}
-              </span>
-            )}
+            <div className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono border border-[#9fc9a2] bg-[#9fc9a2]/15 text-[#1f8a65] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#1f8a65] animate-pulse" />
+              <span>Nuvem Supabase Ativa</span>
+            </div>
           </div>
         )}
       </nav>
