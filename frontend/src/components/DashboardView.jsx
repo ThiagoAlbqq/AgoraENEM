@@ -92,10 +92,22 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
       return a.nome.localeCompare(b.nome);
     });
 
-    return sorted.slice(0, 3).map((item, idx) => ({
-      ...item,
-      rank: idx + 1
-    }));
+    let currentRank = 1;
+    return sorted.slice(0, 3).map((item, idx, arr) => {
+      if (idx > 0) {
+        const prev = arr[idx - 1];
+        const isTied = prev.maxNota === item.maxNota &&
+          getComp(prev, 'competencia_1') === getComp(item, 'competencia_1') &&
+          getComp(prev, 'competencia_4') === getComp(item, 'competencia_4') &&
+          getComp(prev, 'competencia_3') === getComp(item, 'competencia_3') &&
+          getComp(prev, 'competencia_2') === getComp(item, 'competencia_2') &&
+          getComp(prev, 'competencia_5') === getComp(item, 'competencia_5');
+        if (!isTied) {
+          currentRank += 1;
+        }
+      }
+      return { ...item, rank: currentRank };
+    });
   }, [rankingRedacoes, redacoes]);
 
   return (

@@ -129,14 +129,36 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       return a.nome.localeCompare(b.nome);
     });
 
-    // Posições sequenciais oficiais de 1º ao 10º
-    return list.slice(0, 10).map((item, idx) => ({
-      ...item,
-      rank: idx + 1
-    }));
+    // Atribuição de Posição com Empate Técnico (Dense Ranking nos 6 Critérios)
+    let currentRank = 1;
+    const rankedList = [];
+    for (let idx = 0; idx < list.length; idx++) {
+      const item = list[idx];
+      if (idx > 0) {
+        const prev = list[idx - 1];
+        let isTied = false;
+        if (sortBy === 'maxNota') {
+          isTied = prev.maxNota === item.maxNota &&
+            getComp(prev, 'competencia_1') === getComp(item, 'competencia_1') &&
+            getComp(prev, 'competencia_4') === getComp(item, 'competencia_4') &&
+            getComp(prev, 'competencia_3') === getComp(item, 'competencia_3') &&
+            getComp(prev, 'competencia_2') === getComp(item, 'competencia_2') &&
+            getComp(prev, 'competencia_5') === getComp(item, 'competencia_5');
+        } else if (sortBy === 'avgNota') {
+          isTied = prev.avgNota === item.avgNota && prev.maxNota === item.maxNota;
+        } else if (sortBy === 'totalRedacoes') {
+          isTied = prev.totalRedacoes === item.totalRedacoes && prev.maxNota === item.maxNota;
+        }
+        if (!isTied) {
+          currentRank += 1;
+        }
+      }
+      rankedList.push({ ...item, rank: currentRank });
+    }
+    return rankedList.slice(0, 10);
   }, [validRedacoes, selectedTurma, searchQuery, sortBy]);
 
-  // Ranking direto por redações individuais (Top 10)
+  // Ranking direto por redações individuais (Top 10 com Dense Ranking)
   const rankingRedacoes = useMemo(() => {
     let list = [...validRedacoes];
 
@@ -179,11 +201,26 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       return aName.localeCompare(bName);
     });
 
-    // Posições sequenciais oficiais de 1º ao 10º
-    return list.slice(0, 10).map((r, idx) => ({
-      ...r,
-      rank: idx + 1
-    }));
+    // Atribuição de Posição com Empate Técnico (Dense Ranking)
+    let currentRank = 1;
+    const rankedList = [];
+    for (let idx = 0; idx < list.length; idx++) {
+      const r = list[idx];
+      if (idx > 0) {
+        const prev = list[idx - 1];
+        const isTied = (prev.nota_final || 0) === (r.nota_final || 0) &&
+          getComp(prev, 'competencia_1') === getComp(r, 'competencia_1') &&
+          getComp(prev, 'competencia_4') === getComp(r, 'competencia_4') &&
+          getComp(prev, 'competencia_3') === getComp(r, 'competencia_3') &&
+          getComp(prev, 'competencia_2') === getComp(r, 'competencia_2') &&
+          getComp(prev, 'competencia_5') === getComp(r, 'competencia_5');
+        if (!isTied) {
+          currentRank += 1;
+        }
+      }
+      rankedList.push({ ...r, rank: currentRank });
+    }
+    return rankedList.slice(0, 10);
   }, [validRedacoes, selectedTurma, searchQuery]);
 
   // Posição do usuário logado (caso seja estudante)
@@ -203,10 +240,55 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
   const top3 = rankingMode === 'alunos' ? rankingAlunos[2] : rankingRedacoes[2];
 
   const getMedalColor = (rank) => {
-    if (rank === 1) return { bg: 'bg-amber-500/20', text: 'text-amber-500', border: 'border-amber-400', badge: 'bg-amber-500 text-white', label: '1º Lugar' };
-    if (rank === 2) return { bg: 'bg-slate-300/30', text: 'text-slate-400', border: 'border-slate-300', badge: 'bg-slate-400 text-white', label: '2º Lugar' };
-    if (rank === 3) return { bg: 'bg-amber-700/20', text: 'text-amber-700', border: 'border-amber-600', badge: 'bg-amber-700 text-white', label: '3º Lugar' };
-    return { bg: 'bg-[#f7f7f4]', text: 'text-[#807d72]', border: 'border-[#e6e5e0]', badge: 'bg-[#e6e5e0] text-[#26251e]', label: `${rank}º` };
+    if (rank === 1) return { bg: 'bg-amber-500/20', text: 'text-amber-500', border: 'border-amber-400', badge: 'bg-amber-500 text-white', label: '1º Lugar', icon: '🥇' };
+    if (rank === 2) return { bg: 'bg-slate-300/30', text: 'text-slate-400', border: 'border-slate-300', badge: 'bg-slate-400 text-white', label: '2º Lugar', icon: '🥈' };
+    if (rank === 3) return { bg: 'bg-amber-700/20', text: 'text-amber-700', border: 'border-amber-600', badge: 'bg-amber-700 text-white', label: '3º Lugar', icon: '🥉' };
+    return { bg: 'bg-[#f7f7f4]', text: 'text-[#807d72]', border: 'border-[#e6e5e0]', badge: 'bg-[#e6e5e0] text-[#26251e]', label: `${rank}º`, icon: '🎖️' };
+  };
+
+  const getPodiumCardStyle = (rank) => {
+    if (rank === 1) {
+      return {
+        badgeBg: 'bg-amber-500 text-white',
+        border: 'border-amber-400',
+        bgGradient: 'bg-gradient-to-b from-amber-50/80 to-[#ffffff]',
+        icon: '🥇',
+        iconBg: 'bg-amber-100 border-2 border-amber-400 text-amber-700',
+        title: '1º LUGAR',
+        IconComp: Crown
+      };
+    }
+    if (rank === 2) {
+      return {
+        badgeBg: 'bg-slate-400 text-white',
+        border: 'border-slate-300',
+        bgGradient: 'bg-[#ffffff]',
+        icon: '🥈',
+        iconBg: 'bg-slate-100 border-2 border-slate-300 text-slate-600',
+        title: '2º LUGAR',
+        IconComp: Medal
+      };
+    }
+    if (rank === 3) {
+      return {
+        badgeBg: 'bg-amber-700 text-white',
+        border: 'border-amber-700/20',
+        bgGradient: 'bg-[#ffffff]',
+        icon: '🥉',
+        iconBg: 'bg-amber-50 border-2 border-amber-700/30 text-amber-800',
+        title: '3º LUGAR',
+        IconComp: Medal
+      };
+    }
+    return {
+      badgeBg: 'bg-[#e6e5e0] text-[#26251e]',
+      border: 'border-[#e6e5e0]',
+      bgGradient: 'bg-[#ffffff]',
+      icon: '🎖️',
+      iconBg: 'bg-[#f7f7f4] border-2 border-[#e6e5e0] text-[#807d72]',
+      title: `${rank}º LUGAR`,
+      IconComp: Award
+    };
   };
 
   // Helper para verificar se a redação pertence ao aluno logado
@@ -299,113 +381,132 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
       {/* PÓDIO TOP 3 VISUAL */}
       {rankingAlunos.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-2 pb-2">
-          
-          {/* 2º LUGAR (PRATA) */}
-          {top2 && (
-            <div 
-              onClick={() => {
-                if (canViewEssay(top2)) onSelectRedacao(top2.bestRedacao || top2);
-              }}
-              className={`bg-[#ffffff] border-2 border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-2 md:order-1 ${
-                canViewEssay(top2) ? 'hover:border-slate-400 hover:shadow-md cursor-pointer' : 'cursor-default'
-              }`}
-            >
-              <div className="absolute -top-3.5 bg-slate-400 text-white text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-                <Medal className="w-3.5 h-3.5" />
-                {top2.rank}º LUGAR
-              </div>
-              <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-slate-600 font-bold text-lg mb-2 mt-2">
-                🥈
-              </div>
-              <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top2.nome || top2.nome_aluno}</h4>
-              <span className="text-[11px] text-[#807d72] font-mono">{top2.turma || top2.turma_aluno || 'Geral'}</span>
-              
-              <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
-                <div>
-                  <span className="text-[10px] text-[#807d72] block">MAIOR NOTA</span>
-                  <strong className="text-[#f54e00] text-base">{top2.maxNota ?? top2.nota_final}</strong>
-                </div>
-                {top2.avgNota && (
-                  <div>
-                    <span className="text-[10px] text-[#807d72] block">MÉDIA</span>
-                    <strong className="text-[#26251e] text-base">{top2.avgNota}</strong>
-                  </div>
-                )}
-              </div>
+        <div className="space-y-2">
+          {top1 && top2 && top1.rank === 1 && top2.rank === 1 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs text-amber-900 font-mono flex items-center justify-center gap-2 text-center">
+              <span>🤝 <strong>Empate Técnico Oficial:</strong> Alunos com notas idênticas em todos os critérios da matriz ENEM dividem o 1º lugar do pódio.</span>
             </div>
           )}
-
-          {/* 1º LUGAR (OURO - CENTRO & ELEVADO) */}
-          {top1 && (
-            <div 
-              onClick={() => {
-                if (canViewEssay(top1)) onSelectRedacao(top1.bestRedacao || top1);
-              }}
-              className={`bg-gradient-to-b from-amber-50/80 to-[#ffffff] border-2 border-amber-400 rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center relative shadow-md transition-all order-1 md:order-2 md:-translate-y-2 ${
-                canViewEssay(top1) ? 'hover:shadow-lg cursor-pointer' : 'cursor-default'
-              }`}
-            >
-              <div className="absolute -top-4 bg-amber-500 text-white text-xs font-mono font-bold px-4 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                <Crown className="w-4 h-4 text-amber-200" />
-                CAMPEÃO • {top1.rank}º LUGAR
-              </div>
-              <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 font-bold text-2xl mb-2 mt-3 shadow-inner">
-                🥇
-              </div>
-              <h4 className="font-black text-base text-[#26251e] truncate max-w-[220px]">{top1.nome || top1.nome_aluno}</h4>
-              <span className="text-xs text-[#807d72] font-mono font-medium">{top1.turma || top1.turma_aluno || 'Geral'}</span>
-              
-              <div className="mt-4 w-full pt-3 border-t border-amber-200/60 flex justify-around items-center text-xs font-mono">
-                <div>
-                  <span className="text-[10px] text-amber-800 font-bold block">MAIOR NOTA</span>
-                  <strong className="text-[#f54e00] text-xl font-black">{top1.maxNota ?? top1.nota_final}</strong>
-                </div>
-                {top1.avgNota && (
-                  <div>
-                    <span className="text-[10px] text-[#807d72] block">MÉDIA GERAL</span>
-                    <strong className="text-[#26251e] text-xl font-black">{top1.avgNota}</strong>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-2 pb-2">
+            
+            {/* 2º ALUNO (ESQUERDA NO PÓDIO) */}
+            {top2 && (() => {
+              const style = getPodiumCardStyle(top2.rank);
+              const IconComp = style.IconComp;
+              return (
+                <div 
+                  onClick={() => {
+                    if (canViewEssay(top2)) onSelectRedacao(top2.bestRedacao || top2);
+                  }}
+                  className={`${style.bgGradient} border-2 ${style.border} rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-2 md:order-1 ${
+                    canViewEssay(top2) ? 'hover:shadow-md cursor-pointer' : 'cursor-default'
+                  }`}
+                >
+                  <div className={`absolute -top-3.5 ${style.badgeBg} text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs`}>
+                    <IconComp className="w-3.5 h-3.5" />
+                    {top2.rank === 1 ? '1º LUGAR' : `${top2.rank}º LUGAR`}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 3º LUGAR (BRONZE) */}
-          {top3 && (
-            <div 
-              onClick={() => {
-                if (canViewEssay(top3)) onSelectRedacao(top3.bestRedacao || top3);
-              }}
-              className={`bg-[#ffffff] border-2 border-amber-700/20 rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-3 ${
-                canViewEssay(top3) ? 'hover:border-amber-700/50 hover:shadow-md cursor-pointer' : 'cursor-default'
-              }`}
-            >
-              <div className="absolute -top-3.5 bg-amber-700 text-white text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-                <Medal className="w-3.5 h-3.5" />
-                {top3.rank}º LUGAR
-              </div>
-              <div className="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-700/30 flex items-center justify-center text-amber-800 font-bold text-lg mb-2 mt-2">
-                🥉
-              </div>
-              <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top3.nome || top3.nome_aluno}</h4>
-              <span className="text-[11px] text-[#807d72] font-mono">{top3.turma || top3.turma_aluno || 'Geral'}</span>
-              
-              <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
-                <div>
-                  <span className="text-[10px] text-[#807d72] block">MAIOR NOTA</span>
-                  <strong className="text-[#f54e00] text-base">{top3.maxNota ?? top3.nota_final}</strong>
-                </div>
-                {top3.avgNota && (
-                  <div>
-                    <span className="text-[10px] text-[#807d72] block">MÉDIA</span>
-                    <strong className="text-[#26251e] text-base">{top3.avgNota}</strong>
+                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center font-bold text-lg mb-2 mt-2`}>
+                    {style.icon}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top2.nome || top2.nome_aluno}</h4>
+                  <span className="text-[11px] text-[#807d72] font-mono">{top2.turma || top2.turma_aluno || 'Geral'}</span>
+                  
+                  <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
+                    <div>
+                      <span className="text-[10px] text-[#807d72] block">MAIOR NOTA</span>
+                      <strong className="text-[#f54e00] text-base">{top2.maxNota ?? top2.nota_final}</strong>
+                    </div>
+                    {top2.avgNota && (
+                      <div>
+                        <span className="text-[10px] text-[#807d72] block">MÉDIA</span>
+                        <strong className="text-[#26251e] text-base">{top2.avgNota}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
+            {/* 1º ALUNO (CENTRO & ELEVADO NO PÓDIO) */}
+            {top1 && (() => {
+              const style = getPodiumCardStyle(top1.rank);
+              const IconComp = style.IconComp;
+              return (
+                <div 
+                  onClick={() => {
+                    if (canViewEssay(top1)) onSelectRedacao(top1.bestRedacao || top1);
+                  }}
+                  className={`bg-gradient-to-b from-amber-50/80 to-[#ffffff] border-2 border-amber-400 rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center relative shadow-md transition-all order-1 md:order-2 md:-translate-y-2 ${
+                    canViewEssay(top1) ? 'hover:shadow-lg cursor-pointer' : 'cursor-default'
+                  }`}
+                >
+                  <div className="absolute -top-4 bg-amber-500 text-white text-xs font-mono font-bold px-4 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <IconComp className="w-4 h-4 text-amber-200" />
+                    {top1.rank === 1 ? (top2?.rank === 1 ? 'CO-CAMPEÃO • 1º LUGAR' : 'CAMPEÃO • 1º LUGAR') : `${top1.rank}º LUGAR`}
+                  </div>
+                  <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 font-bold text-2xl mb-2 mt-3 shadow-inner">
+                    {style.icon}
+                  </div>
+                  <h4 className="font-black text-base text-[#26251e] truncate max-w-[220px]">{top1.nome || top1.nome_aluno}</h4>
+                  <span className="text-xs text-[#807d72] font-mono font-medium">{top1.turma || top1.turma_aluno || 'Geral'}</span>
+                  
+                  <div className="mt-4 w-full pt-3 border-t border-amber-200/60 flex justify-around items-center text-xs font-mono">
+                    <div>
+                      <span className="text-[10px] text-amber-800 font-bold block">MAIOR NOTA</span>
+                      <strong className="text-[#f54e00] text-xl font-black">{top1.maxNota ?? top1.nota_final}</strong>
+                    </div>
+                    {top1.avgNota && (
+                      <div>
+                        <span className="text-[10px] text-[#807d72] block">MÉDIA GERAL</span>
+                        <strong className="text-[#26251e] text-xl font-black">{top1.avgNota}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 3º ALUNO (DIREITA NO PÓDIO) */}
+            {top3 && (() => {
+              const style = getPodiumCardStyle(top3.rank);
+              const IconComp = style.IconComp;
+              return (
+                <div 
+                  onClick={() => {
+                    if (canViewEssay(top3)) onSelectRedacao(top3.bestRedacao || top3);
+                  }}
+                  className={`${style.bgGradient} border-2 ${style.border} rounded-xl p-4 sm:p-5 flex flex-col items-center text-center relative shadow-sm transition-all order-3 ${
+                    canViewEssay(top3) ? 'hover:shadow-md cursor-pointer' : 'cursor-default'
+                  }`}
+                >
+                  <div className={`absolute -top-3.5 ${style.badgeBg} text-[11px] font-mono font-bold px-3 py-0.5 rounded-full flex items-center gap-1 shadow-xs`}>
+                    <IconComp className="w-3.5 h-3.5" />
+                    {top3.rank === 1 ? '1º LUGAR' : `${top3.rank}º LUGAR`}
+                  </div>
+                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center font-bold text-lg mb-2 mt-2`}>
+                    {style.icon}
+                  </div>
+                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top3.nome || top3.nome_aluno}</h4>
+                  <span className="text-[11px] text-[#807d72] font-mono">{top3.turma || top3.turma_aluno || 'Geral'}</span>
+                  
+                  <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
+                    <div>
+                      <span className="text-[10px] text-[#807d72] block">MAIOR NOTA</span>
+                      <strong className="text-[#f54e00] text-base">{top3.maxNota ?? top3.nota_final}</strong>
+                    </div>
+                    {top3.avgNota && (
+                      <div>
+                        <span className="text-[10px] text-[#807d72] block">MÉDIA</span>
+                        <strong className="text-[#26251e] text-base">{top3.avgNota}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+          </div>
         </div>
       )}
 
