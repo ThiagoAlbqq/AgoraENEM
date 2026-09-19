@@ -525,13 +525,19 @@ export const vincularAlunoRedacao = async (req, res) => {
         }
       }
 
+      const validadoPor = req.user?.id || 1;
+      const dataValidacao = new Date().toISOString();
+
       const { error } = await supabase
         .from('redacoes')
         .update({
           user_id: finalUserId,
           nome_aluno: finalNomeAluno,
           turma_aluno: finalTurmaAluno,
-          nome_detectado: 1
+          nome_detectado: 1,
+          status_validacao: 'VALIDADA',
+          validado_por: validadoPor,
+          data_validacao: dataValidacao
         })
         .eq('id', id);
 
@@ -541,7 +547,10 @@ export const vincularAlunoRedacao = async (req, res) => {
         message: `Redação ID #${id} vinculada ao aluno ${finalNomeAluno} com sucesso!`,
         user_id: finalUserId,
         nome_aluno: finalNomeAluno,
-        turma_aluno: finalTurmaAluno
+        turma_aluno: finalTurmaAluno,
+        status_validacao: 'VALIDADA',
+        validado_por: validadoPor,
+        data_validacao: dataValidacao
       });
     }
 
@@ -560,21 +569,29 @@ export const vincularAlunoRedacao = async (req, res) => {
     const finalUserId = student ? student.id : (user_id || null);
     const finalNomeAluno = student ? student.nome : (nome_aluno || redacao.nome_aluno);
     const finalTurmaAluno = student ? student.turma : (turma_aluno || redacao.turma_aluno);
+    const validadoPor = req.user?.id || 1;
+    const dataValidacao = new Date().toISOString();
 
     db.prepare(`
       UPDATE redacoes
       SET user_id = ?,
           nome_aluno = ?,
           turma_aluno = ?,
-          nome_detectado = 1
+          nome_detectado = 1,
+          status_validacao = 'VALIDADA',
+          validado_por = ?,
+          data_validacao = ?
       WHERE id = ?
-    `).run(finalUserId, finalNomeAluno, finalTurmaAluno, id);
+    `).run(finalUserId, finalNomeAluno, finalTurmaAluno, validadoPor, dataValidacao, id);
 
     res.status(200).json({
       message: `Redação ID #${id} vinculada ao aluno ${finalNomeAluno} com sucesso!`,
       user_id: finalUserId,
       nome_aluno: finalNomeAluno,
-      turma_aluno: finalTurmaAluno
+      turma_aluno: finalTurmaAluno,
+      status_validacao: 'VALIDADA',
+      validado_por: validadoPor,
+      data_validacao: dataValidacao
     });
   } catch (error) {
     console.error('[Vincular Aluno Error]:', error);
