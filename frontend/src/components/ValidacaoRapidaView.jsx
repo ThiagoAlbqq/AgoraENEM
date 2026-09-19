@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   UserCheck, Search, Check, ChevronRight, ChevronLeft, 
   GraduationCap, AlertTriangle, FileText, CheckCircle2,
-  Sparkles, Filter, ExternalLink, ArrowRight, RefreshCw, Save
+  Filter, ExternalLink, RefreshCw, Save, ZoomIn, ZoomOut,
+  RotateCw, Maximize2, Minimize2, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import { authService } from '../services/authService';
+import { db } from '../db/db';
 
 const TURMAS_ESCOLA = [
   '2° A - MANHÃ',
@@ -43,6 +45,16 @@ export default function ValidacaoRapidaView({
   const [studentSearch, setStudentSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+  // Cache de imagens em alta definição (ID -> Base64)
+  const [imagesCache, setImagesCache] = useState({});
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  
+  // Controles de Visualização da Imagem
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [focusHeader, setFocusHeader] = useState(true); // Foco no topo (cabeçalho) por padrão
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Carregar lista de estudantes uma única vez para cache local rápido
   useEffect(() => {
@@ -88,15 +100,61 @@ export default function ValidacaoRapidaView({
   // Redação atual na esteira
   const currentRedacao = filteredRedacoes[currentIndex] || null;
 
-  // Sincronizar campos quando a redação atual mudar na esteira
+  // Sincronizar campos e carregar imagem da redação atual
   useEffect(() => {
     if (currentRedacao) {
       setSelectedStudentId(currentRedacao.user_id ? String(currentRedacao.user_id) : '');
       setManualNome(currentRedacao.nome_aluno || currentRedacao.extracted_data?.aluno || '');
       setManualTurma(currentRedacao.turma_aluno || currentRedacao.extracted_data?.turma || 'Sem Turma');
       setStudentSearch('');
+      setZoomLevel(1);
+      setRotation(0);
+
+      // Carregar imagem da folha se ainda não estiver no cache
+      const redacaoId = currentRedacao.id;
+      if (!imagesCache[redacaoId]) {
+        let isMounted = true;
+        async function fetchImage() {
+          setIsLoadingImage(true);
+          try {
+            // 1. Tenta carregar do IndexedDB local primeiro (0ms)
+            if (db && db.redacoes) {
+              const local = await db.redacoes.get(Number(redacaoId));
+              if (local?.imagem_base64 && isMounted) {
+                setImagesCache(prev => ({ ...prev, [redacaoId]: local.imagem_base64 }));
+                setIsLoadingImage(false);
+                return;
+              }
+            }
+
+            // 2. Se não estiver local ou veio da nuvem, busca via API
+            const fullData = await authService.fetchRedacaoById(redacaoId);
+            if (isMounted && fullData?.imagem_base64) {
+              setImagesCache(prev => ({ ...prev, [redacaoId]: fullData.imagem_base64 }));
+            }
+          } catch (err) {
+            console.warn(`Erro ao carregar imagem para redação #${redacaoId}:`, err);
+          } finally {
+            if (isMounted) setIsLoadingImage(false);
+          }
+        }
+        fetchImage();
+        return () => { isMounted = false; };
+      }
     }
   }, [currentRedacao]);
+
+  // Pré-busca em background da próxima folha para navegação instantânea (0ms de espera)
+  useEffect(() => {
+    const nextItem = filteredRedacoes[currentIndex + 1];
+    if (nextItem && !imagesCache[nextItem.id]) {
+      authService.fetchRedacaoById(nextItem.id).then(data => {
+        if (data?.imagem_base64) {
+          setImagesCache(prev => ({ ...prev, [nextItem.id]: data.imagem_base64 }));
+        }
+      }).catch(() => {});
+    }
+  }, [currentIndex, filteredRedacoes, imagesCache]);
 
   // Lista filtrada de estudantes para autocomplete
   const filteredEstudantesOptions = useMemo(() => {
@@ -165,6 +223,8 @@ export default function ValidacaoRapidaView({
   const pendentesCount = totalCount - vinculadasCount;
   const percentualConcluido = totalCount > 0 ? Math.round((vinculadasCount / totalCount) * 100) : 0;
 
+  const currentImageBase64 = currentRedacao ? imagesCache[currentRedacao.id] : null;
+
   return (
     <div className="space-y-5 animate-fadeIn">
       
@@ -174,13 +234,13 @@ export default function ValidacaoRapidaView({
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#9fc9a2] bg-[#9fc9a2]/15 text-[#1f8a65]">
               <UserCheck className="w-3.5 h-3.5" />
-              <span>Validação Pedagógica de Alunos</span>
+              <span>Conferência da Folha Manuscrita</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight">
-              Conferência de Alunos & Turmas
+              Validação Visual de Alunos & Turmas
             </h2>
             <p className="text-xs text-[#807d72] max-w-2xl leading-relaxed">
-              Verifique rapidamente os nomes e turmas detectados pela IA em cada redação para garantir que as notas caiam no portal correto de cada aluno.
+              Visualize a foto original do cabeçalho da folha para conferir o nome manuscrito do aluno e corrigir qualquer erro de leitura da IA em 1 clique.
             </p>
           </div>
 
@@ -224,7 +284,7 @@ export default function ValidacaoRapidaView({
               viewMode === 'esteira' ? 'bg-[#26251e] text-white shadow-xs' : 'text-[#807d72] hover:text-[#26251e]'
             }`}
           >
-            Modo Esteira (Foco 1 por 1)
+            Modo Esteira (Folha Manuscrita)
           </button>
           <button
             type="button"
@@ -239,7 +299,6 @@ export default function ValidacaoRapidaView({
 
         {/* Filtros */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter */}
           <select
             value={filterType}
             onChange={(e) => { setFilterType(e.target.value); setCurrentIndex(0); }}
@@ -250,7 +309,6 @@ export default function ValidacaoRapidaView({
             <option value="vinculadas">Apenas Vinculadas ({vinculadasCount})</option>
           </select>
 
-          {/* Turma Filter */}
           <select
             value={selectedTurmaFilter}
             onChange={(e) => { setSelectedTurmaFilter(e.target.value); setCurrentIndex(0); }}
@@ -262,7 +320,6 @@ export default function ValidacaoRapidaView({
             ))}
           </select>
 
-          {/* Busca */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
@@ -286,19 +343,19 @@ export default function ValidacaoRapidaView({
       )}
 
       {/* ======================================================== */}
-      {/* MODO 1: ESTEIRA RÁPIDA (FOCO PASSO A PASSO 1 POR 1)      */}
+      {/* MODO 1: ESTEIRA RÁPIDA (VISUALIZAÇÃO DA FOLHA ORIGINAL)  */}
       {/* ======================================================== */}
       {viewMode === 'esteira' && (
         filteredRedacoes.length === 0 ? (
           <div className="p-12 text-center bg-[#ffffff] border border-[#e6e5e0] rounded-xl space-y-2">
             <CheckCircle2 className="w-8 h-8 text-[#1f8a65] mx-auto" />
-            <h3 className="text-sm font-semibold text-[#26251e]">Nenhuma redação pendente com os filtros selecionados</h3>
-            <p className="text-xs text-[#807d72]">Todas as correções deste filtro já foram validadas ou não foram encontradas.</p>
+            <h3 className="text-sm font-semibold text-[#26251e]">Nenhuma redação encontrada neste filtro</h3>
+            <p className="text-xs text-[#807d72]">Todas as correções já foram validadas ou não correspondem à busca.</p>
           </div>
         ) : currentRedacao && (
           <div className="space-y-4">
             
-            {/* Navegador da Esteira */}
+            {/* Navegador Superior da Esteira */}
             <div className="flex items-center justify-between bg-[#ffffff] border border-[#e6e5e0] p-3 rounded-xl shadow-xs">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono text-[#807d72]">Redação</span>
@@ -306,6 +363,9 @@ export default function ValidacaoRapidaView({
                   {currentIndex + 1} de {filteredRedacoes.length}
                 </span>
                 <span className="text-xs font-mono text-[#807d72]">ID #{currentRedacao.id}</span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#f54e00]/10 text-[#f54e00] border border-[#f54e00]/20">
+                  {currentRedacao.nota_final} pts
+                </span>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -313,7 +373,7 @@ export default function ValidacaoRapidaView({
                   type="button"
                   disabled={currentIndex === 0}
                   onClick={() => setCurrentIndex(prev => prev - 1)}
-                  className="px-2.5 py-1.5 border border-[#e6e5e0] bg-[#ffffff] hover:bg-[#fafaf7] text-[#26251e] text-xs rounded-md disabled:opacity-30 cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1.5 border border-[#e6e5e0] bg-[#ffffff] hover:bg-[#fafaf7] text-[#26251e] text-xs rounded-md disabled:opacity-30 cursor-pointer flex items-center gap-1 font-mono"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" /> Anterior
                 </button>
@@ -321,105 +381,151 @@ export default function ValidacaoRapidaView({
                   type="button"
                   disabled={currentIndex >= filteredRedacoes.length - 1}
                   onClick={() => setCurrentIndex(prev => prev + 1)}
-                  className="px-2.5 py-1.5 border border-[#e6e5e0] bg-[#ffffff] hover:bg-[#fafaf7] text-[#26251e] text-xs rounded-md disabled:opacity-30 cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1.5 border border-[#e6e5e0] bg-[#ffffff] hover:bg-[#fafaf7] text-[#26251e] text-xs rounded-md disabled:opacity-30 cursor-pointer flex items-center gap-1 font-mono"
                 >
                   Próxima <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Card Central de Validação */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Grid Principal: Folha Manuscrita (Esq) vs Validação (Dir) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
               
-              {/* Lado Esquerdo (6 Colunas): Resumo da Redação */}
-              <div className="lg:col-span-6 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs flex flex-col justify-between">
-                <div className="space-y-3.5">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#e6e5e0]">
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-[#807d72] block">Redação Avaliada</span>
-                      <h3 className="text-base font-bold text-[#26251e] flex items-center gap-2">
-                        <span>ID #{currentRedacao.id}</span>
-                        <span className="text-xs font-mono font-normal text-[#807d72]">
-                          • {new Date(currentRedacao.data_captura).toLocaleDateString('pt-BR')}
-                        </span>
-                      </h3>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] font-mono uppercase text-[#807d72] block">Nota ENEM</span>
-                      <span className="text-xl font-black font-mono text-[#f54e00]">
-                        {currentRedacao.nota_final} pts
-                      </span>
-                    </div>
+              {/* LADO ESQUERDO (7 Colunas): VISUALIZADOR DA FOLHA MANUSCRITA */}
+              <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
+                
+                {/* Barra de Controles da Imagem */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0] text-xs">
+                  <div className="flex items-center gap-1.5 font-mono font-medium text-[#26251e]">
+                    <ImageIcon className="w-4 h-4 text-[#f54e00]" />
+                    <span>Folha Manuscrita Original</span>
                   </div>
 
-                  {/* Informações extraídas originalmente pelo OCR */}
-                  <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-lg space-y-2 text-xs">
-                    <div className="text-[10px] font-mono uppercase font-bold text-[#a09c92]">
-                      Dados Lidos no Cabeçalho pela IA:
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 font-mono">
-                      <div>
-                        <span className="text-[#807d72] block text-[10px]">Nome Lido:</span>
-                        <strong className="text-[#26251e] truncate block">
-                          {currentRedacao.extracted_data?.aluno || currentRedacao.nome_aluno || 'Não identificado'}
-                        </strong>
-                      </div>
-                      <div>
-                        <span className="text-[#807d72] block text-[10px]">Turma Lida:</span>
-                        <strong className="text-[#26251e] truncate block">
-                          {currentRedacao.extracted_data?.turma || currentRedacao.turma_aluno || 'Geral'}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Trecho Transcrito da Redação para Conferência */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-mono font-medium text-[#807d72] uppercase block">
-                      Início da Transcrição do Aluno:
-                    </span>
-                    <div className="p-3 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg text-xs font-serif text-[#5a5852] leading-relaxed max-h-44 overflow-y-auto custom-scrollbar italic">
-                      "{currentRedacao.texto_digitado || currentRedacao.extracted_data?.texto_transcrito || 'Texto não transcrito.'}"
-                    </div>
+                  <div className="flex items-center gap-1 bg-[#fafaf7] border border-[#e6e5e0] p-1 rounded-md">
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 2.5))}
+                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                      title="Aumentar Zoom (+)"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.75))}
+                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                      title="Diminuir Zoom (-)"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRotation(prev => (prev + 90) % 360)}
+                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                      title="Girar 90°"
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setZoomLevel(1); setRotation(0); }}
+                      className="px-1.5 py-0.5 text-[10px] font-mono text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                    >
+                      Reset
+                    </button>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#e6e5e0] flex items-center justify-between">
+                {/* Box da Imagem com Scroll e Zoom */}
+                <div className="relative bg-[#1e293b] rounded-lg overflow-hidden border border-slate-700 min-h-[420px] max-h-[580px] flex items-start justify-center overflow-auto custom-scrollbar p-2">
+                  {isLoadingImage ? (
+                    <div className="h-64 flex flex-col items-center justify-center gap-2 text-slate-300 text-xs font-mono">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#f54e00]" />
+                      <span>Carregando folha original em alta resolução...</span>
+                    </div>
+                  ) : currentImageBase64 ? (
+                    <div 
+                      className="transition-transform duration-200 origin-top flex justify-center w-full"
+                      style={{
+                        transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+                        transformOrigin: 'top center'
+                      }}
+                    >
+                      <img
+                        src={currentImageBase64}
+                        alt={`Folha da Redação #${currentRedacao.id}`}
+                        className="max-w-full rounded shadow-md object-contain select-none"
+                      />
+                    </div>
+                  ) : (
+                    /* Fallback caso a redação tenha sido enviada em texto puro */
+                    <div className="h-64 w-full flex flex-col items-center justify-center p-6 text-center text-slate-300 space-y-2 bg-[#0f172a] rounded">
+                      <FileText className="w-8 h-8 text-slate-500" />
+                      <p className="text-xs font-mono">Esta redação foi submetida em texto digitado (sem arquivo de imagem escaneada).</p>
+                      <div className="p-3 bg-slate-800 rounded border border-slate-700 text-left font-serif text-xs text-slate-300 max-h-36 overflow-y-auto w-full italic">
+                        "{currentRedacao.texto_digitado || currentRedacao.extracted_data?.texto_transcrito || 'Sem transcrição disponível.'}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dica para o Professor */}
+                <div className="flex items-center justify-between text-[11px] font-mono text-[#807d72]">
+                  <span>Foque no cabeçalho superior da folha para conferir o nome do aluno.</span>
                   <button
                     type="button"
                     onClick={() => onSelectRedacao && onSelectRedacao(currentRedacao)}
-                    className="text-xs font-medium text-[#f54e00] hover:underline flex items-center gap-1 cursor-pointer font-mono"
+                    className="text-[#f54e00] hover:underline flex items-center gap-1 cursor-pointer font-medium"
                   >
-                    <span>Ver Avaliação Pedagógica Completa</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir Folha Oficial Completa</span>
+                    <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
               </div>
 
-              {/* Lado Direito (6 Colunas): Formulário de Vinculação & Validação */}
-              <div className="lg:col-span-6 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs">
+              {/* LADO DIREITO (5 Colunas): FORMULÁRIO DE CONFIRMAÇÃO & ATRIBUIÇÃO */}
+              <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
+                
                 <div>
                   <h4 className="text-sm font-semibold text-[#26251e] flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-[#1f8a65]" />
-                    <span>Confirmar Estudante Oficial</span>
+                    <span>Confirmar Identificação do Aluno</span>
                   </h4>
-                  <p className="text-xs text-[#807d72]">
-                    Selecione o aluno oficial cadastrado ou ajuste o nome e a turma manualmente.
+                  <p className="text-xs text-[#807d72] mt-0.5">
+                    Ajuste os dados se a IA tiver lido a caligrafia com imprecisão.
                   </p>
                 </div>
 
-                {/* Busca e Seleção de Aluno com Autocomplete */}
+                {/* Bloco de Dados Lidos pela IA (Para Comparação) */}
+                <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg space-y-1.5 text-xs font-mono">
+                  <div className="text-[10px] uppercase font-bold text-[#a09c92]">
+                    Leitura Automática da IA:
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#807d72]">Nome Lido:</span>
+                    <strong className="text-[#26251e] text-right truncate max-w-[180px]">
+                      {currentRedacao.extracted_data?.aluno || currentRedacao.nome_aluno || 'Não identificado'}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#807d72]">Turma Lida:</span>
+                    <strong className="text-[#26251e] text-right">
+                      {currentRedacao.extracted_data?.turma || currentRedacao.turma_aluno || 'Geral'}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* 1. Busca e Seleção de Aluno com Autocomplete */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-mono font-medium text-[#26251e] block">
-                    1. Vincular Aluno da Escola:
+                    1. Vincular Aluno Cadastrado (700+ Estudantes):
                   </label>
                   
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Pesquisar entre os 700+ alunos da escola..."
+                      placeholder="Pesquisar por nome ou e-mail..."
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
                       className="w-full pl-8 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
@@ -428,23 +534,23 @@ export default function ValidacaoRapidaView({
 
                   {/* Dropdown de sugestões */}
                   {studentSearch.trim() && (
-                    <div className="max-h-40 overflow-y-auto custom-scrollbar border border-[#e6e5e0] rounded-md bg-[#ffffff] divide-y divide-[#f1f5f9] shadow-md">
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar border border-[#e6e5e0] rounded-md bg-[#ffffff] divide-y divide-[#f1f5f9] shadow-lg">
                       {filteredEstudantesOptions.length === 0 ? (
-                        <div className="p-2.5 text-xs text-[#807d72] font-mono text-center">
-                          Nenhum aluno encontrado com "{studentSearch}".
+                        <div className="p-3 text-xs text-[#807d72] font-mono text-center">
+                          Nenhum estudante encontrado com "{studentSearch}".
                         </div>
                       ) : (
                         filteredEstudantesOptions.map(st => (
                           <div
                             key={st.id}
                             onClick={() => handleSelectStudent(st)}
-                            className="p-2 hover:bg-[#fafaf7] cursor-pointer flex items-center justify-between text-xs transition-colors"
+                            className="p-2.5 hover:bg-[#fafaf7] cursor-pointer flex items-center justify-between text-xs transition-colors"
                           >
-                            <div>
-                              <strong className="text-[#26251e] block">{st.nome}</strong>
-                              <span className="text-[10px] text-[#807d72] font-mono">{st.email}</span>
+                            <div className="min-w-0 pr-2">
+                              <strong className="text-[#26251e] block truncate">{st.nome}</strong>
+                              <span className="text-[10px] text-[#807d72] font-mono truncate block">{st.email}</span>
                             </div>
-                            <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#e6e5e0] text-[#26251e]">
+                            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-[#e6e5e0] text-[#26251e] shrink-0">
                               {st.turma || 'Sem Turma'}
                             </span>
                           </div>
@@ -454,28 +560,29 @@ export default function ValidacaoRapidaView({
                   )}
                 </div>
 
-                {/* Campos Manuais Editáveis */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {/* 2. Campos Finais Confirmados */}
+                <div className="space-y-3 pt-1">
                   <div className="space-y-1">
                     <label className="text-[11px] font-mono text-[#807d72] block">
-                      Nome do Aluno:
+                      Nome Oficial do Aluno:
                     </label>
                     <input
                       type="text"
                       value={manualNome}
                       onChange={(e) => setManualNome(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#fafaf7] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] font-semibold focus:outline-none focus:border-[#26251e]"
+                      placeholder="Nome do aluno..."
+                      className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] font-semibold focus:outline-none focus:border-[#26251e]"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[11px] font-mono text-[#807d72] block">
-                      Turma do Aluno:
+                      Turma Oficial:
                     </label>
                     <select
                       value={manualTurma}
                       onChange={(e) => setManualTurma(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#fafaf7] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] font-semibold focus:outline-none focus:border-[#26251e] cursor-pointer"
+                      className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] font-semibold focus:outline-none focus:border-[#26251e] cursor-pointer"
                     >
                       {TURMAS_ESCOLA.map(t => (
                         <option key={t} value={t}>{t}</option>
@@ -484,22 +591,22 @@ export default function ValidacaoRapidaView({
                   </div>
                 </div>
 
-                {/* Status do Vínculo Atual */}
+                {/* Status do Vínculo */}
                 <div className="p-3 rounded-lg border text-xs font-mono flex items-center justify-between bg-[#fafaf7] border-[#e6e5e0]">
-                  <span className="text-[#807d72]">Conta Vinculada:</span>
+                  <span className="text-[#807d72]">Vínculo do Portal:</span>
                   {selectedStudentId ? (
                     <span className="text-[#1f8a65] font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> ID de Usuário #{selectedStudentId}
+                      <Check className="w-3.5 h-3.5" /> ID #{selectedStudentId}
                     </span>
                   ) : (
                     <span className="text-[#c08532] font-medium flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Vínculo Manual
+                      <AlertTriangle className="w-3.5 h-3.5" /> Apenas Nome Manual
                     </span>
                   )}
                 </div>
 
                 {/* Botões de Ação */}
-                <div className="pt-3 border-t border-[#e6e5e0] flex items-center justify-end gap-2.5">
+                <div className="pt-2 border-t border-[#e6e5e0] flex items-center justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -507,7 +614,7 @@ export default function ValidacaoRapidaView({
                         setCurrentIndex(prev => prev + 1);
                       }
                     }}
-                    className="px-4 py-2 bg-[#ffffff] border border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] text-xs font-medium rounded-md transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-[#ffffff] border border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] text-xs font-medium rounded-md transition-colors cursor-pointer font-mono"
                   >
                     Pular
                   </button>
@@ -516,9 +623,9 @@ export default function ValidacaoRapidaView({
                     type="button"
                     disabled={isSaving || !manualNome.trim()}
                     onClick={handleSaveAndNext}
-                    className="px-5 py-2 bg-[#1f8a65] hover:bg-[#187052] text-white text-xs font-semibold rounded-md transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                    className="flex-1 px-4 py-2.5 bg-[#1f8a65] hover:bg-[#187052] text-white text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 font-mono"
                   >
-                    {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     <span>Confirmar & Próxima</span>
                   </button>
                 </div>
@@ -614,7 +721,7 @@ export default function ValidacaoRapidaView({
                             }}
                             className="px-2.5 py-1 bg-[#ffffff] border border-[#e6e5e0] hover:border-[#26251e] text-[#26251e] text-[11px] font-mono rounded transition-colors cursor-pointer"
                           >
-                            Conferir
+                            Conferir Folha
                           </button>
                         </td>
                       </tr>
