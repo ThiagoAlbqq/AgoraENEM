@@ -127,7 +127,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       setPickerTab('search');
       setNovoNome('');
       setNovoEmail('');
-      alert(`🎉 Aluno ${newStudent.nome} cadastrado e vinculado com sucesso!`);
+      alert(`Aluno ${newStudent.nome} cadastrado e vinculado com sucesso!`);
     } catch (err) {
       alert(err.message || 'Erro ao cadastrar novo estudante.');
     } finally {
@@ -357,7 +357,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     ? 'bg-[#1f8a65]/10 text-[#1f8a65] border-[#1f8a65]/30'
                     : 'bg-[#c08532]/10 text-[#c08532] border-[#c08532]/30'
                 }`}>
-                  {statusValidacao === 'VALIDADA' ? '✓ Validada' : '⏳ Em Revisão'}
+                  {statusValidacao === 'VALIDADA' ? 'Validada' : 'Em Revisão'}
                 </span>
                 
                 <button
@@ -495,7 +495,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-[#f54e00]" />
-              <span>📄 Folha Oficial (PDF 2 Págs)</span>
+              <span>Folha Oficial (PDF 2 Págs)</span>
             </button>
           </div>
 
@@ -883,7 +883,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     {(pdfPreviewPage === 'page1' || pdfPreviewPage === 'both') && (
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-[11px] font-mono text-slate-300 font-bold uppercase tracking-wider">
-                          📄 Página 1 (Frente - Avaliação Pedagógica)
+                          Página 1 (Frente - Avaliação Pedagógica)
                         </span>
                         <div 
                           className="bg-white rounded shadow-2xl overflow-hidden border border-slate-700"
@@ -904,7 +904,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     {(pdfPreviewPage === 'page2' || pdfPreviewPage === 'both') && (
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-[11px] font-mono text-slate-300 font-bold uppercase tracking-wider">
-                          📄 Página 2 (Verso - Transcrição Verbatim)
+                          Página 2 (Verso - Transcrição Verbatim)
                         </span>
                         <div 
                           className="bg-white rounded shadow-2xl overflow-hidden border border-slate-700"
@@ -1146,7 +1146,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                   </div>
 
                   <div className="text-[10px] text-[#807d72] font-mono bg-[#ffffff] p-2.5 rounded border border-[#e6e5e0]">
-                    💡 O estudante receberá a senha padrão inicial <strong>Agora@2026</strong> para entrar em seu portal e consultar a nota desta redação.
+                    O estudante receberá a senha padrão inicial <strong>Agora@2026</strong> para entrar em seu portal e consultar a nota desta redação.
                   </div>
                 </div>
 
@@ -1277,7 +1277,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
                           {isSelected ? (
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-[#9fc9a2] text-[#26251e]">
-                              ✓ VINCULADO
+                              VINCULADO
                             </span>
                           ) : (
                             <button

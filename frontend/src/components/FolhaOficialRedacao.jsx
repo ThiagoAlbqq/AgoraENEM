@@ -4,7 +4,7 @@ import { ShieldCheck, Sparkles } from 'lucide-react';
 /**
  * Componente da Folha Oficial de Avaliação e Redação (Documento Oficial Ágora ENEM / SEDUC-CE).
  * 
- * 💡 DICA PARA O DESENVOLVEDOR:
+ * DICA PARA O DESENVOLVEDOR:
  * Você pode editar este HTML/CSS diretamente no código. O Vite atualizará a prévia
  * instantaneamente (Hot Reload) e o PDF gerado será 100% idêntico a esta estrutura!
  * 

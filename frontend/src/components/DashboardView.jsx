@@ -139,7 +139,7 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
                 className="w-full sm:w-auto px-4 py-2.5 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
               >
                 <Trophy className="w-4 h-4 text-amber-600" />
-                <span>Ver Ranking Geral 🏆</span>
+                <span>Ver Ranking Geral</span>
               </button>
             )}
 
@@ -331,8 +331,8 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {topRanking.map((item) => {
-              const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : '🥉';
               const borderCol = item.rank === 1 ? 'border-amber-300 bg-amber-50/40' : item.rank === 2 ? 'border-slate-200 bg-slate-50/40' : 'border-amber-700/20 bg-amber-50/20';
+              const badgeBg = item.rank === 1 ? 'bg-amber-100 text-amber-700 border-amber-300' : item.rank === 2 ? 'bg-slate-100 text-slate-600 border-slate-300' : 'bg-amber-50 text-amber-800 border-amber-700/30';
               const isOwn = user && (
                 (item.userId && Number(item.userId) === Number(user.id)) ||
                 (user.nome && item.nome && user.nome.trim().toLowerCase() === item.nome.trim().toLowerCase())
@@ -351,7 +351,9 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
                   className={`p-3 rounded-lg border ${borderCol} flex items-center justify-between hover:shadow-xs transition-all cursor-pointer group`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-2xl shrink-0">{medal}</span>
+                    <div className={`w-8 h-8 rounded-full border ${badgeBg} flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-2xs`}>
+                      {item.rank === 1 ? <Crown className="w-4 h-4 text-amber-600" /> : <Medal className="w-4 h-4" />}
+                    </div>
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-[#26251e] truncate group-hover:text-[#f54e00] transition-colors">
                         {item.nome}

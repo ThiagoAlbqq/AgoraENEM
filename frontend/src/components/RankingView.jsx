@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Trophy, Medal, Award, Crown, Sparkles, TrendingUp, 
   Search, Filter, GraduationCap, ChevronRight, Star,
-  Flame, CheckCircle2, User, ArrowUpRight
+  Flame, CheckCircle2, User, ArrowUpRight, Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -86,12 +86,6 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     }
 
     // Ordenação com Critérios de Desempate ENEM:
-    // 1. Maior Nota Final
-    // 2. Norma Culta (C1)
-    // 3. Coesão (C4)
-    // 4. Coerência & Argumentação (C3)
-    // 5. Tema & Repertório (C2)
-    // 6. Intervenção (C5)
     list.sort((a, b) => {
       if (sortBy === 'maxNota') {
         if (b.maxNota !== a.maxNota) return b.maxNota - a.maxNota;
@@ -240,10 +234,10 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
   const top3 = rankingMode === 'alunos' ? rankingAlunos[2] : rankingRedacoes[2];
 
   const getMedalColor = (rank) => {
-    if (rank === 1) return { bg: 'bg-amber-500/20', text: 'text-amber-500', border: 'border-amber-400', badge: 'bg-amber-500 text-white', label: '1º Lugar', icon: '🥇' };
-    if (rank === 2) return { bg: 'bg-slate-300/30', text: 'text-slate-400', border: 'border-slate-300', badge: 'bg-slate-400 text-white', label: '2º Lugar', icon: '🥈' };
-    if (rank === 3) return { bg: 'bg-amber-700/20', text: 'text-amber-700', border: 'border-amber-600', badge: 'bg-amber-700 text-white', label: '3º Lugar', icon: '🥉' };
-    return { bg: 'bg-[#f7f7f4]', text: 'text-[#807d72]', border: 'border-[#e6e5e0]', badge: 'bg-[#e6e5e0] text-[#26251e]', label: `${rank}º`, icon: '🎖️' };
+    if (rank === 1) return { bg: 'bg-amber-500/20', text: 'text-amber-500', border: 'border-amber-400', badge: 'bg-amber-500 text-white', label: '1º Lugar' };
+    if (rank === 2) return { bg: 'bg-slate-300/30', text: 'text-slate-400', border: 'border-slate-300', badge: 'bg-slate-400 text-white', label: '2º Lugar' };
+    if (rank === 3) return { bg: 'bg-amber-700/20', text: 'text-amber-700', border: 'border-amber-600', badge: 'bg-amber-700 text-white', label: '3º Lugar' };
+    return { bg: 'bg-[#f7f7f4]', text: 'text-[#807d72]', border: 'border-[#e6e5e0]', badge: 'bg-[#e6e5e0] text-[#26251e]', label: `${rank}º` };
   };
 
   const getPodiumCardStyle = (rank) => {
@@ -252,8 +246,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
         badgeBg: 'bg-amber-500 text-white',
         border: 'border-amber-400',
         bgGradient: 'bg-gradient-to-b from-amber-50/80 to-[#ffffff]',
-        icon: '🥇',
-        iconBg: 'bg-amber-100 border-2 border-amber-400 text-amber-700',
+        iconColor: 'text-amber-600',
+        iconBg: 'bg-amber-100 border-2 border-amber-400',
         title: '1º LUGAR',
         IconComp: Crown
       };
@@ -263,8 +257,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
         badgeBg: 'bg-slate-400 text-white',
         border: 'border-slate-300',
         bgGradient: 'bg-[#ffffff]',
-        icon: '🥈',
-        iconBg: 'bg-slate-100 border-2 border-slate-300 text-slate-600',
+        iconColor: 'text-slate-500',
+        iconBg: 'bg-slate-100 border-2 border-slate-300',
         title: '2º LUGAR',
         IconComp: Medal
       };
@@ -274,8 +268,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
         badgeBg: 'bg-amber-700 text-white',
         border: 'border-amber-700/20',
         bgGradient: 'bg-[#ffffff]',
-        icon: '🥉',
-        iconBg: 'bg-amber-50 border-2 border-amber-700/30 text-amber-800',
+        iconColor: 'text-amber-800',
+        iconBg: 'bg-amber-50 border-2 border-amber-700/30',
         title: '3º LUGAR',
         IconComp: Medal
       };
@@ -284,8 +278,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
       badgeBg: 'bg-[#e6e5e0] text-[#26251e]',
       border: 'border-[#e6e5e0]',
       bgGradient: 'bg-[#ffffff]',
-      icon: '🎖️',
-      iconBg: 'bg-[#f7f7f4] border-2 border-[#e6e5e0] text-[#807d72]',
+      iconColor: 'text-[#807d72]',
+      iconBg: 'bg-[#f7f7f4] border-2 border-[#e6e5e0]',
       title: `${rank}º LUGAR`,
       IconComp: Award
     };
@@ -303,37 +297,19 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header Banner */}
+      {/* Header Banner Enxuto */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-amber-300 bg-amber-50 text-amber-800">
-              <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Quadro Oficial • Top 10 Melhores Notas</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
-              <span>🏆 Top 10 Ranking Escolar Ágora ENEM</span>
-            </h2>
-            <p className="text-xs text-[#807d72] max-w-2xl leading-relaxed">
-              Classificação das 10 maiores notas da escola validadas na Matriz ENEM. 
-              <span className="block mt-1 text-[11px] font-mono text-[#5a5852]">
-                ⚖️ <strong>Critérios de Desempate Oficiais:</strong> 1º Norma Culta (C1) • 2º Coesão (C4) • 3º Coerência & Argumentação (C3)
-              </span>
-            </p>
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-amber-300 bg-amber-50 text-amber-800">
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            <span>Quadro Oficial • Top 10 Melhores Notas</span>
           </div>
-
-          {/* Quick Stats Pill */}
-          <div className="flex items-center gap-3 bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg text-xs font-mono shrink-0">
-            <div>
-              <span className="text-[10px] text-[#807d72] block uppercase">Participantes</span>
-              <strong className="text-[#26251e] text-sm">{rankingAlunos.length} no Top 10</strong>
-            </div>
-            <div className="h-6 w-px bg-[#e6e5e0]" />
-            <div>
-              <span className="text-[10px] text-[#807d72] block uppercase">Redações</span>
-              <strong className="text-[#f54e00] text-sm">{validRedacoes.length} corrigidas</strong>
-            </div>
-          </div>
+          <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
+            <span>Top 10 Ranking Escolar Ágora ENEM</span>
+          </h2>
+          <p className="text-xs text-[#807d72] max-w-2xl leading-relaxed">
+            Classificação das 10 maiores notas da escola validadas na Matriz ENEM.
+          </p>
         </div>
       </div>
 
@@ -351,7 +327,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                   Sua Classificação
                 </span>
                 <span className="text-xs text-[#807d72] font-mono">
-                  {currentStudentRank.rank <= 10 ? 'Você está no Top 10 Oficial!' : `Posição ${currentStudentRank.rank}º no quadro escolar`}
+                  {currentStudentRank.rank <= 10 ? 'Você está no Top 10 Oficial' : `Posição ${currentStudentRank.rank}º no quadro escolar`}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-[#26251e] mt-1">
@@ -384,7 +360,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
         <div className="space-y-2">
           {top1 && top2 && top1.rank === 1 && top2.rank === 1 && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-xs text-amber-900 font-mono flex items-center justify-center gap-2 text-center">
-              <span>🤝 <strong>Empate Técnico Oficial:</strong> Alunos com notas idênticas em todos os critérios da matriz ENEM dividem o 1º lugar do pódio.</span>
+              <span><strong>Empate Técnico Oficial:</strong> Alunos com notas idênticas em todos os critérios da matriz ENEM dividem o 1º lugar do pódio.</span>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-2 pb-2">
@@ -406,8 +382,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                     <IconComp className="w-3.5 h-3.5" />
                     {top2.rank === 1 ? '1º LUGAR' : `${top2.rank}º LUGAR`}
                   </div>
-                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center font-bold text-lg mb-2 mt-2`}>
-                    {style.icon}
+                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center ${style.iconColor} mb-2 mt-2 shadow-2xs`}>
+                    <IconComp className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top2.nome || top2.nome_aluno}</h4>
                   <span className="text-[11px] text-[#807d72] font-mono">{top2.turma || top2.turma_aluno || 'Geral'}</span>
@@ -445,8 +421,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                     <IconComp className="w-4 h-4 text-amber-200" />
                     {top1.rank === 1 ? (top2?.rank === 1 ? 'CO-CAMPEÃO • 1º LUGAR' : 'CAMPEÃO • 1º LUGAR') : `${top1.rank}º LUGAR`}
                   </div>
-                  <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 font-bold text-2xl mb-2 mt-3 shadow-inner">
-                    {style.icon}
+                  <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 mb-2 mt-3 shadow-inner">
+                    <Crown className="w-8 h-8 text-amber-600" />
                   </div>
                   <h4 className="font-black text-base text-[#26251e] truncate max-w-[220px]">{top1.nome || top1.nome_aluno}</h4>
                   <span className="text-xs text-[#807d72] font-mono font-medium">{top1.turma || top1.turma_aluno || 'Geral'}</span>
@@ -484,8 +460,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                     <IconComp className="w-3.5 h-3.5" />
                     {top3.rank === 1 ? '1º LUGAR' : `${top3.rank}º LUGAR`}
                   </div>
-                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center font-bold text-lg mb-2 mt-2`}>
-                    {style.icon}
+                  <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center ${style.iconColor} mb-2 mt-2 shadow-2xs`}>
+                    <IconComp className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top3.nome || top3.nome_aluno}</h4>
                   <span className="text-[11px] text-[#807d72] font-mono">{top3.turma || top3.turma_aluno || 'Geral'}</span>
@@ -631,7 +607,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                         <td className="py-3.5 px-4 text-center font-mono">
                           {item.rank <= 3 ? (
                             <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${medal.badge}`}>
-                              {item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : '🥉'}
+                              #{item.rank}
                             </span>
                           ) : (
                             <span className="font-bold text-[#807d72] text-xs">
@@ -675,8 +651,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                               Ver Redação <ChevronRight className="w-3 h-3 inline" />
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#a09c92] font-mono">
-                              🔒 Restrito
+                            <span className="text-[10px] text-[#a09c92] font-mono inline-flex items-center justify-center gap-1">
+                              <Lock className="w-3 h-3" /> Restrito
                             </span>
                           )}
                         </td>
@@ -711,7 +687,9 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                       >
                         <td className="py-3.5 px-4 text-center font-mono font-bold text-xs">
                           {r.rank <= 3 ? (
-                            <span className="text-base">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : '🥉'}</span>
+                            <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${r.rank === 1 ? 'bg-amber-500 text-white' : r.rank === 2 ? 'bg-slate-400 text-white' : 'bg-amber-700 text-white'}`}>
+                              #{r.rank}
+                            </span>
                           ) : (
                             `#${r.rank}`
                           )}
@@ -748,8 +726,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                               Ver Redação <ChevronRight className="w-3 h-3 inline" />
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#a09c92] font-mono">
-                              🔒 Restrito
+                            <span className="text-[10px] text-[#a09c92] font-mono inline-flex items-center justify-center gap-1">
+                              <Lock className="w-3 h-3" /> Restrito
                             </span>
                           )}
                         </td>

@@ -67,7 +67,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       a.download = `backup-redacoes-clara-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      alert(`🎉 Backup concluído com sucesso! ${redacoesLocais.length} redação(ões) baixada(s).`);
+      alert(`Backup concluído com sucesso! ${redacoesLocais.length} redação(ões) baixada(s).`);
     } catch (err) {
       alert('Erro ao baixar backup local: ' + err.message);
     }
