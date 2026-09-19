@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from '../src/config/supabaseClient.js';
 
-async function verifyLogin() {
-  const email = 'estudante.modelo@aluno.ce.gov.br';
+async function verify() {
+  const email = 'isabele.oliveira30@aluno.ce.gov.br';
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
@@ -10,19 +10,18 @@ async function verifyLogin() {
     .single();
 
   if (error || !user) {
-    console.error('User not found:', error);
+    console.error('Erro ao buscar:', error);
     return;
   }
 
-  const matches = bcrypt.compareSync('Agora@2026', user.senha_hash);
-  console.log('Login verification for Estudante Modelo:', {
+  console.log('✅ Verificado com sucesso no Supabase:', {
     id: user.id,
     nome: user.nome,
     email: user.email,
     turma: user.turma,
     role: user.role,
-    passwordMatches: matches
+    senhaCorreta: bcrypt.compareSync('Agora@2026', user.senha_hash)
   });
 }
 
-verifyLogin();
+verify();
