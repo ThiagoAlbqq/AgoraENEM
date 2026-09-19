@@ -7,14 +7,14 @@ import { JWT_SECRET } from '../middleware/authMiddleware.js';
 // POST /api/auth/login
 export const login = async (req, res) => {
   try {
-    const { email, senha } = req.body;
+    const { email, senha } = req.body || {};
 
     if (!email || !senha) {
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
     }
 
     let user = null;
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = String(email).trim().toLowerCase();
 
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
@@ -41,7 +41,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
     }
 
-    const isValidPassword = bcrypt.compareSync(senha, user.senha_hash);
+    if (!user.senha_hash) {
+      return res.status(401).json({ error: 'Usuário sem senha cadastrada. Por favor, redefina sua senha com a coordenação.' });
+    }
+
+    const isValidPassword = bcrypt.compareSync(String(senha), user.senha_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
     }
@@ -54,7 +58,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Login realizado com sucesso!',
       token,
       user: {
@@ -67,7 +71,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error('[Auth Error Login]:', error);
-    res.status(500).json({ error: 'Erro interno ao realizar login.' });
+    return res.status(500).json({ error: 'Erro interno ao realizar login.', details: error?.message });
   }
 };
 
